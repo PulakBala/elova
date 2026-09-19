@@ -2,18 +2,17 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import {
   Tag,
-  Check,
   X,
   ShieldCheck,
   Truck,
   RotateCcw,
-  Sparkles,
   Lock,
+  Loader2,
 } from "lucide-react";
-import { useShop, type CartItem } from "@/context/ShopContext";
+import { useShop } from "@/context/ShopContext";
+import { validateCouponApi, resolveAssetUrl } from "@/lib/api";
 
 export interface AppliedCoupon {
   code: string;
@@ -40,8 +39,9 @@ export function OrderSummary({
   const [couponInput, setCouponInput] = useState("");
   const [couponError, setCouponError] = useState("");
   const [couponSuccess, setCouponSuccess] = useState("");
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
-  const handleApply = (e: React.FormEvent) => {
+  const handleApply = async (e: React.FormEvent) => {
     e.preventDefault();
     setCouponError("");
     setCouponSuccess("");
@@ -49,21 +49,40 @@ export function OrderSummary({
     const code = couponInput.trim().toUpperCase();
     if (!code) return;
 
-    if (code === "ELVOA10") {
-      const discount = Math.round(cartSubtotal * 0.1);
-      onApplyCoupon({ code, type: "percentage", amount: discount });
-      setCouponSuccess("10% discount applied successfully!");
-      setCouponInput("");
-    } else if (code === "WELCOME50") {
-      onApplyCoupon({ code, type: "fixed", amount: 50 });
-      setCouponSuccess("৳50 discount applied successfully!");
-      setCouponInput("");
-    } else if (code === "FREESHIP") {
-      onApplyCoupon({ code, type: "freeship", amount: deliveryFee });
-      setCouponSuccess("Free Shipping promo applied!");
-      setCouponInput("");
-    } else {
-      setCouponError("Invalid promo code. Try 'ELVOA10' or 'WELCOME50'.");
+    setIsValidatingCoupon(true);
+    try {
+      const res = await validateCouponApi(code, cartSubtotal);
+      if (res.success && res.data) {
+        onApplyCoupon({
+          code: res.data.code,
+          type: res.data.type === "fixed" ? "fixed" : "percentage",
+          amount: res.data.discount_amount,
+        });
+        setCouponSuccess(res.message || "Coupon applied successfully!");
+        setCouponInput("");
+      } else {
+        setCouponError(res.message || "Invalid coupon code.");
+      }
+    } catch (err: any) {
+      // Fallback for offline demo codes
+      if (code === "ELVOA10") {
+        const discount = Math.round(cartSubtotal * 0.1);
+        onApplyCoupon({ code, type: "percentage", amount: discount });
+        setCouponSuccess("10% discount applied successfully!");
+        setCouponInput("");
+      } else if (code === "WELCOME50") {
+        onApplyCoupon({ code, type: "fixed", amount: 50 });
+        setCouponSuccess("৳50 discount applied successfully!");
+        setCouponInput("");
+      } else if (code === "FREESHIP") {
+        onApplyCoupon({ code, type: "freeship", amount: deliveryFee });
+        setCouponSuccess("Free Shipping promo applied!");
+        setCouponInput("");
+      } else {
+        setCouponError(err.message || "Could not validate coupon code.");
+      }
+    } finally {
+      setIsValidatingCoupon(false);
     }
   };
 
@@ -99,7 +118,7 @@ export function OrderSummary({
           <div key={item.id} className="pt-3 first:pt-0 flex items-center gap-3">
             <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-neutral-200/80 bg-neutral-100">
               <Image
-                src={item.image}
+                src={resolveAssetUrl(item.image)}
                 alt={item.title}
                 fill
                 sizes="56px"
@@ -154,7 +173,7 @@ export function OrderSummary({
               <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-400" />
               <input
                 type="text"
-                placeholder="Promo Code (e.g. ELVOA10)"
+                placeholder="Promo Code (e.g. SAVE10)"
                 value={couponInput}
                 onChange={(e) => setCouponInput(e.target.value)}
                 className="w-full h-9 rounded-xl border border-neutral-300 pl-9 pr-3 text-xs uppercase placeholder-neutral-400 focus:border-[#FF5B37] focus:outline-none"
@@ -162,9 +181,11 @@ export function OrderSummary({
             </div>
             <button
               type="submit"
-              className="rounded-xl bg-neutral-900 px-4 text-xs font-bold text-white hover:bg-neutral-800 transition-colors cursor-pointer"
+              disabled={isValidatingCoupon || !couponInput.trim()}
+              className="rounded-xl bg-neutral-900 px-4 text-xs font-bold text-white hover:bg-neutral-800 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
             >
-              Apply
+              {isValidatingCoupon && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              <span>{isValidatingCoupon ? "Validating..." : "Apply"}</span>
             </button>
           </form>
         )}
@@ -249,4 +270,3 @@ export function OrderSummary({
     </div>
   );
 }
-

@@ -20,6 +20,7 @@ import { CategorySidebar } from "@/components/elvoa/CategorySidebar";
 import { TrustPillars } from "@/components/elvoa/TrustPillars";
 import { Footer } from "@/components/elvoa/Footer";
 import { useShop } from "@/context/ShopContext";
+import { resolveAssetUrl } from "@/lib/api";
 
 export function WishlistContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -118,9 +119,12 @@ export function WishlistContent() {
 
                       {/* Image Thumbnail */}
                       <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-neutral-100/70">
-                        <Link href={`/product/${product.id}`}>
+                        <Link
+                          href={`/products/${product.slug || product.id}`}
+                          className="relative block h-full w-full"
+                        >
                           <Image
-                            src={product.image}
+                            src={resolveAssetUrl(product.image)}
                             alt={product.title}
                             fill
                             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"

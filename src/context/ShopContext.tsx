@@ -17,10 +17,13 @@ import {
   initialOrders,
   initialAddresses,
 } from "@/data/mock-account";
+import { mainCategories, type CategoryItem } from "@/data/categories";
+import { fetchCategoryTree, resolveAssetUrl, type ApiCategoryTreeItem } from "@/lib/api";
 
 export interface CartItem {
   id: string;
-  productId: string;
+  productId: string | number;
+  variantId?: number;
   title: string;
   image: string;
   price: number;
@@ -31,20 +34,28 @@ export interface CartItem {
   inStock: boolean;
 }
 
-interface AddToCartOptions {
+export interface AddToCartOptions {
   size?: string;
   color?: string;
   quantity?: number;
+  variantId?: number;
+  price?: number;
+  image?: string;
 }
 
 interface ShopContextType {
+  // Categories (Dynamic from API + Fallback)
+  categories: CategoryItem[];
+  isCategoriesLoading: boolean;
+  refreshCategories: () => Promise<void>;
+
   // Cart
   cart: CartItem[];
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
   openCart: () => void;
   closeCart: () => void;
-  addToCart: (product: Product, options?: AddToCartOptions) => void;
+  addToCart: (product: Product | any, options?: AddToCartOptions) => void;
   updateQuantity: (itemId: string, quantity: number) => void;
   removeFromCart: (itemId: string) => void;
   clearCart: () => void;
@@ -96,9 +107,43 @@ const defaultWishlistIds = ["chopper", "waterbottle", "blender"];
 
 const ShopContext = createContext<ShopContextType | undefined>(undefined);
 
+function mapApiCategory(apiCat: ApiCategoryTreeItem): CategoryItem {
+  return {
+    id: String(apiCat.id || apiCat.slug),
+    name: apiCat.name,
+    slug: apiCat.slug,
+    iconImage: resolveAssetUrl(apiCat.icon_image),
+    badge: apiCat.badge || undefined,
+    subcategories: (apiCat.subcategories || []).map((sub) => ({
+      id: String(sub.id || sub.slug),
+      name: sub.name,
+      slug: sub.slug,
+      itemCount: sub.products_count,
+    })),
+  };
+}
+
 export function ShopProvider({ children }: { children: ReactNode }) {
   const [isClient, setIsClient] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
+
+  // Dynamic Categories from API with immediate fallback to mainCategories
+  const [categories, setCategories] = useState<CategoryItem[]>(mainCategories);
+  const [isCategoriesLoading, setIsCategoriesLoading] = useState(false);
+
+  const refreshCategories = async () => {
+    setIsCategoriesLoading(true);
+    try {
+      const tree = await fetchCategoryTree();
+      if (tree && tree.length > 0) {
+        setCategories(tree.map(mapApiCategory));
+      }
+    } catch (e) {
+      console.warn("Could not fetch category tree from API, using fallback", e);
+    } finally {
+      setIsCategoriesLoading(false);
+    }
+  };
 
   // 1. Cart State
   const [cart, setCart] = useState<CartItem[]>(defaultCart);
@@ -111,9 +156,10 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [addresses, setAddresses] = useState<SavedAddress[]>(initialAddresses);
 
-  // Load from localStorage on client mount
+  // Load from localStorage on client mount & fetch live categories
   useEffect(() => {
     setIsClient(true);
+    refreshCategories();
     try {
       const savedCart = localStorage.getItem("elvoa_cart");
       if (savedCart) {
@@ -219,11 +265,20 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const openCart = () => setIsCartOpen(true);
   const closeCart = () => setIsCartOpen(false);
 
-  const addToCart = (product: Product, options?: AddToCartOptions) => {
+  const addToCart = (product: Product | any, options?: AddToCartOptions) => {
     const size = options?.size || (product.sizes && product.sizes[0]) || "Standard";
     const color = options?.color || (product.colors && product.colors[0]) || "Standard";
     const quantity = options?.quantity || 1;
-    const itemId = `${product.id}-${size.toLowerCase()}-${color.toLowerCase()}`;
+    const variantId =
+      options?.variantId ||
+      product.default_variant_id ||
+      product.variants?.[0]?.id ||
+      undefined;
+    const price = options?.price !== undefined ? options.price : product.price;
+    const originalPrice =
+      product.originalPrice !== undefined ? product.originalPrice : product.original_price;
+    const image = options?.image || product.image;
+    const itemId = `${product.id}-${variantId || size.toLowerCase()}-${color.toLowerCase()}`;
 
     setCart((prev) => {
       const existing = prev.find((item) => item.id === itemId);
@@ -239,14 +294,15 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         {
           id: itemId,
           productId: product.id,
+          variantId,
           title: product.title,
-          image: product.image,
-          price: product.price,
-          originalPrice: product.originalPrice,
+          image,
+          price,
+          originalPrice,
           size,
           color,
           quantity,
-          inStock: product.inStock !== false,
+          inStock: product.inStock !== false && product.in_stock !== false,
         },
       ];
     });
@@ -282,11 +338,11 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   };
 
   const removeFromWishlist = (productId: string) => {
-    setWishlist((prev) => prev.filter((p) => p.id !== productId));
+    setWishlist((prev) => prev.filter((p) => String(p.id) !== String(productId)));
   };
 
   const toggleWishlist = (product: Product) => {
-    if (wishlist.some((p) => p.id === product.id)) {
+    if (wishlist.some((p) => String(p.id) === String(product.id))) {
       removeFromWishlist(product.id);
     } else {
       addToWishlist(product);
@@ -294,7 +350,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   };
 
   const isInWishlist = (productId: string) => {
-    return wishlist.some((p) => p.id === productId);
+    return wishlist.some((p) => String(p.id) === String(productId));
   };
 
   const moveToCart = (product: Product) => {
@@ -376,6 +432,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   };
 
   const value: ShopContextType = {
+    categories,
+    isCategoriesLoading,
+    refreshCategories,
     cart,
     isCartOpen,
     setIsCartOpen,
@@ -417,4 +476,3 @@ export function useShop() {
   }
   return context;
 }
-

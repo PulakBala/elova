@@ -3,6 +3,9 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { mainCategories } from "@/data/categories";
 import { CategoryListingContent } from "@/components/listing/CategoryListingContent";
+import { fetchCategory } from "@/lib/api";
+
+export const dynamicParams = true;
 
 interface PageProps {
   params: Promise<{
@@ -18,25 +21,49 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const category = mainCategories.find((c) => c.slug === slug);
+  let categoryName = mainCategories.find((c) => c.slug === slug)?.name;
 
-  if (!category) {
+  if (!categoryName) {
+    const apiCat = await fetchCategory(slug);
+    if (apiCat) {
+      categoryName = apiCat.name;
+    }
+  }
+
+  if (!categoryName) {
     return {
       title: "Category Not Found | ELVOA",
     };
   }
 
   return {
-    title: `${category.name} | ELVOA Store`,
-    description: `Shop trending ${category.name} with fast delivery and great deals. Quality products. Great prices. Only at ELVOA.`,
+    title: `${categoryName} | ELVOA Store`,
+    description: `Shop trending ${categoryName} with fast delivery and great deals. Quality products. Great prices. Only at ELVOA.`,
   };
 }
 
 export default async function CategoryPage({ params }: PageProps) {
   const { slug } = await params;
-  const category = mainCategories.find((c) => c.slug === slug);
+  let category = mainCategories.find((c) => c.slug === slug);
 
-  // If category does not exist in master list, check if it's general or 404
+  if (!category) {
+    const apiCat = await fetchCategory(slug);
+    if (apiCat) {
+      category = {
+        id: String(apiCat.id),
+        name: apiCat.name,
+        slug: apiCat.slug,
+        iconImage: apiCat.icon_image,
+        subcategories: (apiCat.subcategories || []).map((s) => ({
+          id: String(s.id),
+          name: s.name,
+          slug: s.slug,
+          itemCount: s.products_count,
+        })),
+      };
+    }
+  }
+
   if (!category) {
     notFound();
   }
@@ -56,4 +83,3 @@ export default async function CategoryPage({ params }: PageProps) {
     </Suspense>
   );
 }
-

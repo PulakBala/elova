@@ -1,17 +1,20 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/context/AuthContext";
 import { ShopProvider } from "@/context/ShopContext";
 import { CartDrawer } from "@/components/cart/CartDrawer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -30,10 +33,12 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <ShopProvider>
-          {children}
-          <CartDrawer />
-        </ShopProvider>
+        <AuthProvider>
+          <ShopProvider>
+            {children}
+            <CartDrawer />
+          </ShopProvider>
+        </AuthProvider>
       </body>
     </html>
   );

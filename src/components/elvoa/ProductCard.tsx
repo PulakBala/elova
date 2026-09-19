@@ -5,19 +5,29 @@ import Link from "next/link";
 import { Star, ShoppingCart, Heart } from "lucide-react";
 import type { Product } from "@/data/products";
 import { useShop } from "@/context/ShopContext";
+import { resolveAssetUrl } from "@/lib/api";
 
 interface ProductCardProps {
-  product: Product;
+  product: Product | any;
   className?: string;
 }
 
 export function ProductCard({ product, className = "" }: ProductCardProps) {
   const { addToCart, toggleWishlist, isInWishlist } = useShop();
 
-  const isWishlisted = isInWishlist(product.id);
+  const isWishlisted = isInWishlist(String(product.id));
   const isDiscount = product.badge?.type === "discount";
   const isNew = product.badge?.type === "new";
   const isHot = product.badge?.type === "hot";
+
+  const productHref = `/products/${product.slug || product.id}`;
+  const displayImage = resolveAssetUrl(product.image);
+  const reviewsCountDisplay =
+    product.reviewsCount !== undefined
+      ? product.reviewsCount
+      : product.reviews_count !== undefined
+      ? product.reviews_count
+      : 0;
 
   return (
     <div
@@ -26,9 +36,9 @@ export function ProductCard({ product, className = "" }: ProductCardProps) {
       <div>
         {/* Product Image Box with Badge & Wishlist Action */}
         <div className="relative aspect-[4/3] sm:aspect-square w-full overflow-hidden rounded-lg bg-neutral-100/70">
-          <Link href={`/product/${product.id}`} className="block h-full w-full">
+          <Link href={productHref} className="relative block h-full w-full">
             <Image
-              src={product.image}
+              src={displayImage}
               alt={product.title}
               fill
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
@@ -80,14 +90,14 @@ export function ProductCard({ product, className = "" }: ProductCardProps) {
 
         {/* Product Title */}
         <h3 className="mt-2 text-[11.5px] sm:text-[12.5px] font-medium leading-snug text-neutral-900 line-clamp-2 group-hover:text-[#FF5B37] transition-colors min-h-[32px]">
-          <Link href={`/product/${product.id}`}>{product.title}</Link>
+          <Link href={productHref}>{product.title}</Link>
         </h3>
 
         {/* Rating and Reviews */}
         <div className="mt-1 flex items-center gap-1 text-[11px] sm:text-[11.5px]">
           <Star className="h-3 w-3 fill-amber-400 text-amber-400 shrink-0" />
           <span className="font-bold text-neutral-800">{product.rating}</span>
-          <span className="text-neutral-400">({product.reviewsCount})</span>
+          <span className="text-neutral-400">({reviewsCountDisplay})</span>
         </div>
 
         {/* Price Row */}

@@ -1,8 +1,12 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import { SlidersHorizontal, PackageSearch, RotateCcw } from "lucide-react";
+import {
+  SlidersHorizontal,
+  PackageSearch,
+  RotateCcw,
+} from "lucide-react";
 import { TopBar } from "@/components/elvoa/TopBar";
 import { Header } from "@/components/elvoa/Header";
 import { SubNav } from "@/components/elvoa/SubNav";
@@ -15,7 +19,9 @@ import { FilterDrawer } from "./FilterDrawer";
 import { ListingHeader, type SortOption } from "./ListingHeader";
 import { Pagination } from "./Pagination";
 import { mainCategories } from "@/data/categories";
-import { allProducts, type Product } from "@/data/products";
+import { allProducts } from "@/data/products";
+import { useShop } from "@/context/ShopContext";
+import { fetchProducts, type ApiProduct, type PaginationMeta } from "@/lib/api";
 
 interface CategoryListingContentProps {
   categorySlug?: string;
@@ -30,10 +36,12 @@ export function CategoryListingContent({
   customTitle,
   customDescription,
 }: CategoryListingContentProps) {
+  const { categories } = useShop();
   const searchParams = useSearchParams();
   const subQuery = searchParams.get("sub");
   const minQuery = searchParams.get("min");
-  const maxQuery = searchParams.get("max") || (searchParams.get("tag") === "under-499" ? "499" : "");
+  const maxQuery =
+    searchParams.get("max") || (searchParams.get("tag") === "under-499" ? "499" : "");
   const sortQuery = searchParams.get("sort");
 
   // Global category navigation sidebar state
@@ -47,7 +55,12 @@ export function CategoryListingContent({
 
   // Sorting state
   const [sortOption, setSortOption] = useState<SortOption>(() => {
-    if (sortQuery && ["price-low", "price-high", "newest", "best-selling", "rating", "featured"].includes(sortQuery)) {
+    if (
+      sortQuery &&
+      ["price-low", "price-high", "newest", "best-selling", "rating", "featured"].includes(
+        sortQuery
+      )
+    ) {
       return sortQuery as SortOption;
     }
     return "featured";
@@ -56,21 +69,34 @@ export function CategoryListingContent({
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
 
+  // API Data State
+  const [apiProducts, setApiProducts] = useState<ApiProduct[]>([]);
+  const [paginationMeta, setPaginationMeta] = useState<PaginationMeta>({
+    current_page: 1,
+    last_page: 1,
+    per_page: PAGE_SIZE,
+    total: 0,
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Category list resolution
+  const categoriesList = categories && categories.length > 0 ? categories : mainCategories;
+
   // Lookup current category object
   const currentCategory = useMemo(() => {
     if (!categorySlug || categorySlug === "all" || categorySlug === "shop") {
       return null;
     }
-    return mainCategories.find((c) => c.slug === categorySlug) || null;
-  }, [categorySlug]);
+    return categoriesList.find((c) => c.slug === categorySlug) || null;
+  }, [categorySlug, categoriesList]);
 
   // Subcategories available for this category (or pooled if shop)
   const availableSubcategories = useMemo(() => {
     if (currentCategory) {
       return currentCategory.subcategories;
     }
-    return mainCategories.flatMap((c) => c.subcategories);
-  }, [currentCategory]);
+    return categoriesList.flatMap((c) => c.subcategories);
+  }, [currentCategory, categoriesList]);
 
   // Comprehensive filter state
   const [filters, setFilters] = useState<FilterState>({
@@ -87,22 +113,100 @@ export function CategoryListingContent({
   useEffect(() => {
     const sub = searchParams.get("sub");
     const min = searchParams.get("min");
-    const max = searchParams.get("max") || (searchParams.get("tag") === "under-499" ? "499" : "");
+    const max =
+      searchParams.get("max") || (searchParams.get("tag") === "under-499" ? "499" : "");
     const sort = searchParams.get("sort");
 
-    if (sort && ["price-low", "price-high", "newest", "best-selling", "rating", "featured"].includes(sort)) {
+    if (
+      sort &&
+      ["price-low", "price-high", "newest", "best-selling", "rating", "featured"].includes(sort)
+    ) {
       setSortOption(sort as SortOption);
     }
 
     setFilters((prev) => ({
       ...prev,
       selectedSubcategories: sub
-        ? (prev.selectedSubcategories.includes(sub) ? prev.selectedSubcategories : [...prev.selectedSubcategories, sub])
+        ? prev.selectedSubcategories.includes(sub)
+          ? prev.selectedSubcategories
+          : [...prev.selectedSubcategories, sub]
         : prev.selectedSubcategories,
       priceMin: min !== null ? min : prev.priceMin,
       priceMax: max ? max : prev.priceMax,
     }));
   }, [searchParams]);
+
+  // Fetch products from Laravel API
+  const loadProducts = useCallback(async () => {
+    setIsLoading(true);
+
+    try {
+      const isUnder499 = searchParams.get("tag") === "under-499";
+      const searchKeyword = searchParams.get("search") || searchParams.get("q") || undefined;
+      const res = await fetchProducts({
+        category_slug:
+          categorySlug !== "all" && categorySlug !== "shop" ? categorySlug : undefined,
+        sub:
+          filters.selectedSubcategories.length > 0
+            ? filters.selectedSubcategories
+            : undefined,
+        min_price: filters.priceMin || undefined,
+        max_price: filters.priceMax || (isUnder499 ? 499 : undefined),
+        sizes: filters.selectedSizes.length > 0 ? filters.selectedSizes : undefined,
+        colors: filters.selectedColors.length > 0 ? filters.selectedColors : undefined,
+        in_stock: filters.inStockOnly || undefined,
+        sort: sortOption,
+        search: searchKeyword,
+        page: currentPage,
+        per_page: PAGE_SIZE,
+      });
+
+      setApiProducts(res.products);
+      setPaginationMeta(res.meta);
+    } catch (err: any) {
+      console.warn("API products fetch failed, falling back to client-filtered catalog:", err);
+      // Client-side fallback if backend API is offline
+      let fallback = [...allProducts];
+
+      if (categorySlug && categorySlug !== "all" && categorySlug !== "shop") {
+        fallback = fallback.filter(
+          (p) => p.categorySlug?.toLowerCase() === categorySlug.toLowerCase()
+        );
+      }
+      if (filters.selectedSubcategories.length > 0) {
+        fallback = fallback.filter(
+          (p) =>
+            p.subCategorySlug &&
+            filters.selectedSubcategories.includes(p.subCategorySlug)
+        );
+      }
+      if (filters.priceMin) {
+        const min = parseFloat(filters.priceMin);
+        if (!isNaN(min)) fallback = fallback.filter((p) => p.price >= min);
+      }
+      if (filters.priceMax) {
+        const max = parseFloat(filters.priceMax);
+        if (!isNaN(max)) fallback = fallback.filter((p) => p.price <= max);
+      }
+      if (filters.inStockOnly) {
+        fallback = fallback.filter((p) => p.inStock === true);
+      }
+
+      setApiProducts(fallback as unknown as ApiProduct[]);
+      setPaginationMeta({
+        current_page: currentPage,
+        last_page: Math.ceil(fallback.length / PAGE_SIZE) || 1,
+        per_page: PAGE_SIZE,
+        total: fallback.length,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [categorySlug, filters, sortOption, currentPage, searchParams]);
+
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
 
   // Reset all filters
   const handleResetFilters = () => {
@@ -130,102 +234,8 @@ export function CategoryListingContent({
     return count;
   }, [filters]);
 
-  // Filter & Sort Products
-  const filteredAndSortedProducts = useMemo(() => {
-    let result = [...allProducts];
-
-    // 1. Filter by category slug
-    if (categorySlug && categorySlug !== "all" && categorySlug !== "shop") {
-      result = result.filter(
-        (p) => p.categorySlug?.toLowerCase() === categorySlug.toLowerCase()
-      );
-    }
-
-    // 2. Filter by subcategories
-    if (filters.selectedSubcategories.length > 0) {
-      result = result.filter(
-        (p) =>
-          p.subCategorySlug &&
-          filters.selectedSubcategories.includes(p.subCategorySlug)
-      );
-    }
-
-    // 3. Filter by Price Range
-    if (filters.priceMin) {
-      const min = parseFloat(filters.priceMin);
-      if (!isNaN(min)) {
-        result = result.filter((p) => p.price >= min);
-      }
-    }
-    if (filters.priceMax) {
-      const max = parseFloat(filters.priceMax);
-      if (!isNaN(max)) {
-        result = result.filter((p) => p.price <= max);
-      }
-    }
-
-    // 4. Filter by Sizes
-    if (filters.selectedSizes.length > 0) {
-      result = result.filter((p) =>
-        p.sizes?.some((s) => filters.selectedSizes.includes(s))
-      );
-    }
-
-    // 5. Filter by Colors
-    if (filters.selectedColors.length > 0) {
-      result = result.filter((p) =>
-        p.colors?.some((c) => filters.selectedColors.includes(c))
-      );
-    }
-
-    // 6. Filter by In Stock
-    if (filters.inStockOnly) {
-      result = result.filter((p) => p.inStock === true);
-    }
-
-    // 7. Filter by Rating
-    if (filters.minRating) {
-      result = result.filter((p) => p.rating >= filters.minRating!);
-    }
-
-    // Sort Results
-    switch (sortOption) {
-      case "price-low":
-        result.sort((a, b) => a.price - b.price);
-        break;
-      case "price-high":
-        result.sort((a, b) => b.price - a.price);
-        break;
-      case "newest":
-        result.sort(
-          (a, b) =>
-            new Date(b.createdAt || "").getTime() -
-            new Date(a.createdAt || "").getTime()
-        );
-        break;
-      case "best-selling":
-        result.sort((a, b) => (b.salesCount || 0) - (a.salesCount || 0));
-        break;
-      case "rating":
-        result.sort((a, b) => b.rating - a.rating);
-        break;
-      case "featured":
-      default:
-        // Default catalog order
-        break;
-    }
-
-    return result;
-  }, [categorySlug, filters, sortOption]);
-
-  // Pagination calculation
-  const totalItems = filteredAndSortedProducts.length;
-  const totalPages = Math.ceil(totalItems / PAGE_SIZE);
-
-  const paginatedProducts = useMemo(() => {
-    const startIndex = (currentPage - 1) * PAGE_SIZE;
-    return filteredAndSortedProducts.slice(startIndex, startIndex + PAGE_SIZE);
-  }, [filteredAndSortedProducts, currentPage]);
+  const totalItems = paginationMeta.total;
+  const totalPages = paginationMeta.last_page;
 
   // Page title and description
   const pageTitle =
@@ -248,6 +258,7 @@ export function CategoryListingContent({
       <CategorySidebar
         isOpen={globalSidebarOpen}
         onClose={() => setGlobalSidebarOpen(false)}
+        categories={categoriesList}
       />
 
       {/* 3. Mobile Slide-Over Filter Drawer */}
@@ -309,7 +320,34 @@ export function CategoryListingContent({
 
             {/* Right Column: Product Grid & Pagination */}
             <div className="flex-1 min-w-0">
-              {paginatedProducts.length > 0 ? (
+              {isLoading ? (
+                /* Loading Skeleton Grid */
+                <div
+                  className={`grid grid-cols-2 gap-2.5 sm:gap-3.5 ${
+                    gridCols === 4
+                      ? "md:grid-cols-3 xl:grid-cols-4"
+                      : "md:grid-cols-3 xl:grid-cols-3"
+                  }`}
+                >
+                  {Array.from({ length: 6 }).map((_, idx) => (
+                    <div
+                      key={idx}
+                      className="flex flex-col justify-between rounded-xl border border-neutral-200 bg-white p-2 sm:p-2.5 animate-pulse"
+                    >
+                      <div>
+                        <div className="aspect-[4/3] sm:aspect-square w-full rounded-lg bg-neutral-200" />
+                        <div className="mt-2.5 h-3.5 w-3/4 rounded bg-neutral-200" />
+                        <div className="mt-1.5 h-3 w-1/2 rounded bg-neutral-200" />
+                        <div className="mt-2 flex gap-2">
+                          <div className="h-4 w-14 rounded bg-neutral-200" />
+                          <div className="h-4 w-10 rounded bg-neutral-200" />
+                        </div>
+                      </div>
+                      <div className="mt-3 h-8 w-full rounded-lg bg-neutral-200" />
+                    </div>
+                  ))}
+                </div>
+              ) : apiProducts.length > 0 ? (
                 <>
                   {/* Responsive Product Grid */}
                   <div
@@ -319,7 +357,7 @@ export function CategoryListingContent({
                         : "md:grid-cols-3 xl:grid-cols-3"
                     }`}
                   >
-                    {paginatedProducts.map((product) => (
+                    {apiProducts.map((product) => (
                       <ProductCard
                         key={product.id}
                         product={product}
@@ -329,16 +367,18 @@ export function CategoryListingContent({
                   </div>
 
                   {/* Accessible Pagination */}
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    totalItems={totalItems}
-                    pageSize={PAGE_SIZE}
-                    onPageChange={(page) => {
-                      setCurrentPage(page);
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    }}
-                  />
+                  {totalPages > 1 && (
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      totalItems={totalItems}
+                      pageSize={PAGE_SIZE}
+                      onPageChange={(page) => {
+                        setCurrentPage(page);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                    />
+                  )}
                 </>
               ) : (
                 /* Empty State when no products match filters */
@@ -350,7 +390,7 @@ export function CategoryListingContent({
                     No products found
                   </h3>
                   <p className="mt-1 text-xs text-neutral-500 max-w-sm">
-                    We couldn&apos;t find any items matching your selected filters. Try broadening your criteria or reset all filters.
+                    We couldn&apos;t find any items matching your selected criteria. Try resetting your filters to see more results.
                   </p>
                   <button
                     type="button"

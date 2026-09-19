@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import {
   X,
@@ -12,8 +12,13 @@ import {
   CheckCircle2,
   Phone,
   ShieldCheck,
+  Truck,
+  ExternalLink,
+  Copy,
+  Check,
 } from "lucide-react";
 import type { Order } from "@/data/mock-account";
+import { resolveAssetUrl } from "@/lib/api";
 
 interface OrderDetailsModalProps {
   order: Order | null;
@@ -21,6 +26,8 @@ interface OrderDetailsModalProps {
 }
 
 export function OrderDetailsModal({ order, onClose }: OrderDetailsModalProps) {
+  const [copied, setCopied] = useState(false);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && order) {
@@ -38,6 +45,24 @@ export function OrderDetailsModal({ order, onClose }: OrderDetailsModalProps) {
   }, [order, onClose]);
 
   if (!order) return null;
+
+  const handleCopyTracking = () => {
+    if (order.courierTrackingCode) {
+      navigator.clipboard.writeText(order.courierTrackingCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const trackingPortalUrl =
+    order.courierTrackingUrl ||
+    (order.courierTrackingCode
+      ? order.courierPartner === "steadfast"
+        ? `https://steadfast.com.bd/t/${order.courierTrackingCode}`
+        : order.courierPartner === "pathao"
+        ? `https://merchant.pathao.com/tracking?consignment_id=${order.courierTrackingCode}`
+        : `https://redx.com.bd/track-order?trackingId=${order.courierTrackingCode}`
+      : null);
 
   const getStatusBadge = (status: Order["status"]) => {
     switch (status) {
@@ -105,6 +130,60 @@ export function OrderDetailsModal({ order, onClose }: OrderDetailsModalProps) {
           </button>
         </div>
 
+        {/* Dedicated Courier Gateway & Live Tracking Banner */}
+        {order.courierTrackingCode && (
+          <div className="my-5 rounded-2xl bg-purple-50/70 p-4 border border-purple-200/80">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center justify-center h-6 w-6 rounded-lg bg-purple-600 text-white shadow-xs">
+                    <Truck className="h-3.5 w-3.5" />
+                  </span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-purple-900">
+                    Dispatched via {order.courierPartner ? order.courierPartner.toUpperCase() : "COURIER"}
+                  </span>
+                </div>
+                <div className="mt-1.5 flex items-center gap-2">
+                  <span className="text-xs text-neutral-600">Tracking Number:</span>
+                  <span className="font-mono text-xs font-bold text-neutral-900 bg-white px-2 py-0.5 rounded border border-purple-200">
+                    {order.courierTrackingCode}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCopyTracking}
+                    title="Copy tracking code"
+                    className="inline-flex items-center gap-1 text-[11px] font-medium text-purple-700 hover:text-purple-900 cursor-pointer"
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="h-3 w-3 text-emerald-600" />
+                        <span className="text-emerald-600 font-bold">Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3 w-3" />
+                        <span>Copy</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {trackingPortalUrl && (
+                <a
+                  href={trackingPortalUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white px-4 py-2 text-xs font-bold shadow-xs transition-colors cursor-pointer shrink-0"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  <span>Track Package Online</span>
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Live Tracking Timeline */}
         <div className="my-5 rounded-2xl bg-neutral-50 p-4 border border-neutral-200/80">
           <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-500 mb-3.5">
@@ -155,7 +234,7 @@ export function OrderDetailsModal({ order, onClose }: OrderDetailsModalProps) {
               <div key={idx} className="pt-3 first:pt-0 flex items-center gap-3.5">
                 <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-neutral-200/80 bg-neutral-100">
                   <Image
-                    src={item.image}
+                    src={resolveAssetUrl(item.image)}
                     alt={item.title}
                     fill
                     sizes="56px"

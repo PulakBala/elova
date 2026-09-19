@@ -1,14 +1,20 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import { mainCategories } from "@/data/categories";
+import { useShop } from "@/context/ShopContext";
 
 export function CategoryIcons() {
+  const { categories } = useShop();
+  const list = categories && categories.length > 0 ? categories : mainCategories;
+
   return (
     <section className="w-full bg-white pt-4 pb-2">
       <div className="mx-auto max-w-[1360px] px-3 sm:px-6">
         {/* Horizontal scroll container on mobile, full grid on desktop */}
         <div className="flex items-start justify-between gap-2 overflow-x-auto pb-2 scrollbar-none sm:gap-3 lg:grid lg:grid-cols-10 lg:gap-3 lg:overflow-visible">
-          {mainCategories.map((cat) => (
+          {list.map((cat) => (
             <Link
               key={cat.id}
               href={`/category/${cat.slug}`}

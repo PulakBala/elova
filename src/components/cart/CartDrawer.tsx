@@ -15,6 +15,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useShop } from "@/context/ShopContext";
+import { resolveAssetUrl } from "@/lib/api";
 
 export function CartDrawer() {
   const {
@@ -64,78 +65,66 @@ export function CartDrawer() {
         }`}
       />
 
-      {/* 2. Slide-Over Drawer Container (Right side) */}
+      {/* 2. Slide-Over Cart Drawer */}
       <aside
-        role="dialog"
         aria-label="Shopping Cart Drawer"
         aria-modal="true"
-        className={`fixed top-0 right-0 bottom-0 z-50 flex w-full max-w-[420px] flex-col bg-white text-neutral-900 shadow-2xl transition-transform duration-300 ease-out ${
+        role="dialog"
+        className={`fixed top-0 right-0 bottom-0 z-50 flex w-full max-w-[400px] flex-col bg-white text-neutral-900 shadow-2xl transition-transform duration-300 ease-out ${
           isCartOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
         {/* Drawer Header */}
-        <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-4 bg-neutral-50/70 shrink-0">
+        <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-4 bg-neutral-50/70">
           <div className="flex items-center gap-2">
             <ShoppingBag className="h-5 w-5 text-[#FF5B37]" />
-            <h2 className="text-base font-bold text-neutral-900">
-              Shopping Cart
+            <h2 className="text-sm font-bold uppercase tracking-wider text-neutral-900">
+              Your Bag
             </h2>
-            <span className="flex h-5 items-center justify-center rounded-full bg-[#FF5B37]/10 px-2 text-[11px] font-bold text-[#FF5B37]">
-              {totalCartItems} {totalCartItems === 1 ? "item" : "items"}
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#FF5B37] text-[11px] font-bold text-white">
+              {totalCartItems}
             </span>
           </div>
 
           <button
-            type="button"
             onClick={closeCart}
             aria-label="Close cart"
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 text-neutral-500 transition-colors hover:bg-white hover:text-neutral-900 hover:shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#FF5B37] cursor-pointer"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 text-neutral-600 transition-colors hover:bg-white hover:text-neutral-900 hover:shadow-xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#FF5B37]"
           >
             <X className="h-4.5 w-4.5" />
           </button>
         </div>
 
-        {/* Free Shipping Progress Indicator */}
-        <div className="border-b border-neutral-200 bg-[#FFF7F5] px-5 py-3 shrink-0">
-          <div className="flex items-center justify-between text-xs font-semibold">
-            <div className="flex items-center gap-1.5 text-neutral-800">
-              {hasFreeShipping ? (
-                <>
-                  <Sparkles className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
-                  <span className="text-[#079455] font-bold">
-                    You unlocked FREE Nationwide Delivery!
-                  </span>
-                </>
-              ) : (
-                <>
-                  <Truck className="h-3.5 w-3.5 text-[#FF5B37]" />
-                  <span>
-                    Add{" "}
-                    <strong className="text-[#FF5B37] font-bold">
-                      ৳{amountNeededForFreeShipping.toLocaleString()}
-                    </strong>{" "}
-                    more for FREE delivery
-                  </span>
-                </>
-              )}
-            </div>
-            <span className="text-[11px] text-neutral-500 font-medium">
+        {/* Free Shipping Progress Bar */}
+        <div className="border-b border-neutral-100 bg-neutral-50/50 px-5 py-3">
+          <div className="flex items-center justify-between text-xs font-semibold mb-1.5">
+            {hasFreeShipping ? (
+              <span className="flex items-center gap-1.5 text-emerald-600 font-bold">
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>You unlocked FREE Nationwide Delivery!</span>
+              </span>
+            ) : (
+              <span className="text-neutral-600">
+                Add <strong>৳{amountNeededForFreeShipping.toLocaleString()}</strong> more for{" "}
+                <span className="text-[#FF5B37]">FREE delivery</span>
+              </span>
+            )}
+            <span className="text-[11px] text-neutral-400 font-bold">
               {freeShippingProgress}%
             </span>
           </div>
 
-          {/* Progress Bar Track */}
-          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-neutral-200">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-200">
             <div
-              className={`h-full rounded-full transition-all duration-500 ease-out ${
-                hasFreeShipping ? "bg-[#079455]" : "bg-[#FF5B37]"
+              className={`h-full transition-all duration-500 rounded-full ${
+                hasFreeShipping ? "bg-emerald-500" : "bg-[#FF5B37]"
               }`}
               style={{ width: `${freeShippingProgress}%` }}
             />
           </div>
         </div>
 
-        {/* Cart Itemized List / Empty State */}
+        {/* Cart Itemized List */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 scrollbar-none">
           {cart.length > 0 ? (
             <div className="space-y-4 divide-y divide-neutral-100">
@@ -144,7 +133,7 @@ export function CartDrawer() {
                   {/* Item Image Thumbnail */}
                   <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-neutral-200/80 bg-neutral-100">
                     <Image
-                      src={item.image}
+                      src={resolveAssetUrl(item.image)}
                       alt={item.title}
                       fill
                       sizes="80px"
@@ -157,7 +146,7 @@ export function CartDrawer() {
                     <div>
                       <div className="flex items-start justify-between gap-2">
                         <h3 className="text-xs sm:text-[13px] font-semibold text-neutral-900 leading-snug line-clamp-2 hover:text-[#FF5B37] transition-colors">
-                          <Link href={`/product/${item.productId}`} onClick={closeCart}>
+                          <Link href={`/products/${item.productId}`} onClick={closeCart}>
                             {item.title}
                           </Link>
                         </h3>
@@ -299,4 +288,3 @@ export function CartDrawer() {
     </>
   );
 }
-

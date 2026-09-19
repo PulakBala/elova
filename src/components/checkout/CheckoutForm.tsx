@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   User,
   Mail,
@@ -10,12 +11,9 @@ import {
   EyeOff,
   MapPin,
   Building,
-  Truck,
   CreditCard,
   Banknote,
   Smartphone,
-  CheckCircle2,
-  ShieldCheck,
   Info,
 } from "lucide-react";
 
@@ -42,6 +40,8 @@ interface CheckoutFormProps {
   formData: CheckoutFormData;
   onChange: (updated: Partial<CheckoutFormData>) => void;
   errors: Record<string, string>;
+  isAuthenticated?: boolean;
+  currentUser?: any;
 }
 
 const DISTRICT_CITIES = [
@@ -62,11 +62,33 @@ const DISTRICT_CITIES = [
   "Faridpur",
 ];
 
-export function CheckoutForm({ formData, onChange, errors }: CheckoutFormProps) {
+export function CheckoutForm({
+  formData,
+  onChange,
+  errors,
+  isAuthenticated,
+  currentUser,
+}: CheckoutFormProps) {
   const [showPassword, setShowPassword] = useState(false);
 
   return (
     <div className="space-y-6">
+      {/* Optional Guest Sign In Banner */}
+      {!isAuthenticated && (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-amber-50/70 p-3.5 sm:p-4 text-xs text-neutral-800">
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4 text-[#FF5B37] shrink-0" />
+            <span>Already have an ELVOA account?</span>
+          </div>
+          <Link
+            href="/login?redirect=/checkout"
+            className="font-bold text-[#FF5B37] hover:underline shrink-0"
+          >
+            Sign in to pre-fill
+          </Link>
+        </div>
+      )}
+
       {/* 1. Customer Details & Instant Account Creation */}
       <section className="rounded-2xl border border-neutral-200/90 bg-white p-5 sm:p-6 shadow-xs">
         <div className="flex items-center gap-2.5 pb-4 border-b border-neutral-200">
@@ -75,10 +97,19 @@ export function CheckoutForm({ formData, onChange, errors }: CheckoutFormProps) 
           </div>
           <div>
             <h3 className="text-base font-bold text-neutral-900 leading-tight">
-              Customer Details & Instant Account Creation
+              {isAuthenticated
+                ? "Customer Contact Details"
+                : "Customer Details & Instant Account Creation"}
             </h3>
             <p className="text-[11.5px] text-neutral-500">
-              No prior registration needed — your account will be created seamlessly.
+              {isAuthenticated && currentUser ? (
+                <span className="text-emerald-700 font-medium">
+                  Logged in as {currentUser.name} (
+                  {currentUser.phone || currentUser.email})
+                </span>
+              ) : (
+                "No prior registration needed — your account will be created seamlessly upon order."
+              )}
             </p>
           </div>
         </div>
@@ -162,56 +193,59 @@ export function CheckoutForm({ formData, onChange, errors }: CheckoutFormProps) 
             )}
           </div>
 
-          {/* Required Create Account Password */}
-          <div className="sm:col-span-2">
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-semibold text-neutral-700 flex items-center gap-1.5">
-                <span>Create Account Password</span>
-                <span className="text-[#D92D20]">*</span>
-              </label>
-              <span className="text-[11px] text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded-full">
-                Instant Account Activation
-              </span>
-            </div>
-            <div className="relative">
-              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Minimum 6 characters"
-                value={formData.password}
-                onChange={(e) => onChange({ password: e.target.value })}
-                className={`w-full h-10.5 rounded-xl border pl-10 pr-11 text-xs text-neutral-800 placeholder-neutral-400 transition-colors focus:outline-none ${
-                  errors.password
-                    ? "border-[#D92D20] bg-red-50/20"
-                    : "border-neutral-300 focus:border-[#FF5B37]"
-                }`}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 cursor-pointer p-1"
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </button>
-            </div>
-            {errors.password ? (
-              <p className="mt-1 text-[11px] text-[#D92D20] font-medium">
-                {errors.password}
-              </p>
-            ) : (
-              <p className="mt-1.5 text-[11px] text-neutral-500 flex items-center gap-1">
-                <Info className="h-3 w-3 text-neutral-400 shrink-0" />
-                <span>
-                  This password creates your permanent account so you can track this order in your dashboard.
+          {/* Required Create Account Password for Guests */}
+          {!isAuthenticated && (
+            <div className="sm:col-span-2">
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-semibold text-neutral-700 flex items-center gap-1.5">
+                  <span>Create Account Password</span>
+                  <span className="text-[#D92D20]">*</span>
+                </label>
+                <span className="text-[11px] text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded-full">
+                  Instant Account Activation
                 </span>
-              </p>
-            )}
-          </div>
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Minimum 6 characters"
+                  value={formData.password}
+                  onChange={(e) => onChange({ password: e.target.value })}
+                  className={`w-full h-10.5 rounded-xl border pl-10 pr-11 text-xs text-neutral-800 placeholder-neutral-400 transition-colors focus:outline-none ${
+                    errors.password
+                      ? "border-[#D92D20] bg-red-50/20"
+                      : "border-neutral-300 focus:border-[#FF5B37]"
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 cursor-pointer p-1"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+              {errors.password ? (
+                <p className="mt-1 text-[11px] text-[#D92D20] font-medium">
+                  {errors.password}
+                </p>
+              ) : (
+                <p className="mt-1.5 text-[11px] text-neutral-500 flex items-center gap-1">
+                  <Info className="h-3 w-3 text-neutral-400 shrink-0" />
+                  <span>
+                    This password creates your permanent account so you can
+                    track this order in your dashboard.
+                  </span>
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </section>
 
@@ -485,9 +519,21 @@ export function CheckoutForm({ formData, onChange, errors }: CheckoutFormProps) 
               <div className="mt-3.5 pt-3.5 border-t border-neutral-200/80 space-y-3">
                 <div className="flex gap-2">
                   {[
-                    { id: "bkash", name: "bKash", color: "text-pink-600 border-pink-300" },
-                    { id: "nagad", name: "Nagad", color: "text-orange-600 border-orange-300" },
-                    { id: "rocket", name: "Rocket", color: "text-purple-600 border-purple-300" },
+                    {
+                      id: "bkash",
+                      name: "bKash",
+                      color: "text-pink-600 border-pink-300",
+                    },
+                    {
+                      id: "nagad",
+                      name: "Nagad",
+                      color: "text-orange-600 border-orange-300",
+                    },
+                    {
+                      id: "rocket",
+                      name: "Rocket",
+                      color: "text-purple-600 border-purple-300",
+                    },
                   ].map((p) => (
                     <button
                       key={p.id}
@@ -512,11 +558,14 @@ export function CheckoutForm({ formData, onChange, errors }: CheckoutFormProps) 
                     type="tel"
                     placeholder="01XXXXXXXXX"
                     value={formData.mobileNumber}
-                    onChange={(e) => onChange({ mobileNumber: e.target.value })}
+                    onChange={(e) =>
+                      onChange({ mobileNumber: e.target.value })
+                    }
                     className="w-full h-9 rounded-xl border border-neutral-300 px-3 text-xs focus:border-[#FF5B37] focus:outline-none bg-white"
                   />
                   <p className="mt-1 text-[10.5px] text-neutral-500">
-                    You will receive an automated OTP prompt after placing your order.
+                    You will receive an automated OTP prompt after placing your
+                    order.
                   </p>
                 </div>
               </div>
@@ -575,7 +624,9 @@ export function CheckoutForm({ formData, onChange, errors }: CheckoutFormProps) 
                     type="text"
                     placeholder="4111 2222 3333 4444"
                     value={formData.cardNumber}
-                    onChange={(e) => onChange({ cardNumber: e.target.value })}
+                    onChange={(e) =>
+                      onChange({ cardNumber: e.target.value })
+                    }
                     className="w-full h-9 rounded-xl border border-neutral-300 px-3 text-xs focus:border-[#FF5B37] focus:outline-none bg-white"
                   />
                 </div>
@@ -589,7 +640,9 @@ export function CheckoutForm({ formData, onChange, errors }: CheckoutFormProps) 
                       type="text"
                       placeholder="12/28"
                       value={formData.cardExpiry}
-                      onChange={(e) => onChange({ cardExpiry: e.target.value })}
+                      onChange={(e) =>
+                        onChange({ cardExpiry: e.target.value })
+                      }
                       className="w-full h-9 rounded-xl border border-neutral-300 px-3 text-xs focus:border-[#FF5B37] focus:outline-none bg-white"
                     />
                   </div>
@@ -602,7 +655,9 @@ export function CheckoutForm({ formData, onChange, errors }: CheckoutFormProps) 
                       maxLength={4}
                       placeholder="•••"
                       value={formData.cardCvv}
-                      onChange={(e) => onChange({ cardCvv: e.target.value })}
+                      onChange={(e) =>
+                        onChange({ cardCvv: e.target.value })
+                      }
                       className="w-full h-9 rounded-xl border border-neutral-300 px-3 text-xs focus:border-[#FF5B37] focus:outline-none bg-white"
                     />
                   </div>
@@ -615,4 +670,3 @@ export function CheckoutForm({ formData, onChange, errors }: CheckoutFormProps) 
     </div>
   );
 }
-

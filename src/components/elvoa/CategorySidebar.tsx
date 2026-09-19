@@ -5,16 +5,23 @@ import Link from "next/link";
 import Image from "next/image";
 import { X, ChevronDown, ChevronRight, Sparkles } from "lucide-react";
 import { mainCategories, type CategoryItem } from "@/data/categories";
+import { useShop } from "@/context/ShopContext";
 import { ElvoaLogo } from "./ElvoaLogo";
 
 interface CategorySidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  categories?: CategoryItem[];
 }
 
-export function CategorySidebar({ isOpen, onClose }: CategorySidebarProps) {
+export function CategorySidebar({ isOpen, onClose, categories: propCategories }: CategorySidebarProps) {
+  const { categories: contextCategories } = useShop();
+  const categoriesList = propCategories || contextCategories || mainCategories;
+
   // State tracking which category is currently expanded
-  const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>("home-kitchen");
+  const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(() => {
+    return categoriesList[0]?.id || "home-kitchen";
+  });
 
   // Toggle category accordion
   const toggleCategory = (categoryId: string) => {
@@ -84,7 +91,7 @@ export function CategorySidebar({ isOpen, onClose }: CategorySidebarProps) {
         {/* Categories List Container */}
         <div className="flex-1 overflow-y-auto px-3 py-3 scrollbar-none">
           <div className="space-y-1">
-            {mainCategories.map((cat: CategoryItem) => {
+            {categoriesList.map((cat: CategoryItem) => {
               const isExpanded = expandedCategoryId === cat.id;
 
               return (
@@ -177,7 +184,7 @@ export function CategorySidebar({ isOpen, onClose }: CategorySidebarProps) {
         {/* Drawer Bottom Quick Action */}
         <div className="border-t border-neutral-200 p-4 bg-neutral-50">
           <Link
-            href="/deals"
+            href="/shop?tag=under-499"
             onClick={onClose}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#111827] py-2.5 px-4 text-xs font-bold text-white shadow-sm transition-all hover:bg-neutral-800"
           >
@@ -189,4 +196,3 @@ export function CategorySidebar({ isOpen, onClose }: CategorySidebarProps) {
     </>
   );
 }
-

@@ -47,6 +47,10 @@ export interface Order {
     postalCode: string;
   };
   tracking: OrderTrackingStep[];
+  courierPartner?: string | null;
+  courierTrackingCode?: string | null;
+  courierTrackingUrl?: string | null;
+  courierConsignmentId?: string | null;
 }
 
 export interface SavedAddress {
