@@ -194,7 +194,7 @@ export interface CheckoutOrderPayload {
   shipping_address: string;
   postal_code?: string | null;
   delivery_method: "inside-dhaka" | "outside-dhaka";
-  payment_method: "cod" | "bkash" | "nagad" | "card" | "sslcommerz";
+  payment_method: "cod" | "sslcommerz";
   coupon_code?: string | null;
   customer_notes?: string | null;
   items: CheckoutOrderItem[];
@@ -203,6 +203,8 @@ export interface CheckoutOrderPayload {
 export interface CheckoutOrderResult {
   success: boolean;
   message: string;
+  redirect_url?: string | null;
+  payment_type?: "online" | "cod" | string;
   data?: {
     id: number;
     order_number: string;
@@ -494,6 +496,69 @@ export async function submitCheckoutOrder(
     body: JSON.stringify(payload),
   });
 }
+
+/**
+ * Fetch order confirmation details by order_number
+ */
+export async function fetchCheckoutOrder(orderNumber: string): Promise<{
+  success: boolean;
+  message?: string;
+  data?: {
+    id: number;
+    order_number: string;
+    customer: {
+      name: string;
+      phone: string;
+      email?: string | null;
+      user_id?: number | null;
+    };
+    shipping: {
+      district: string;
+      address: string;
+      delivery_charge: number;
+    };
+    pricing: {
+      subtotal: number;
+      discount: number;
+      delivery_charge: number;
+      grand_total: number;
+    };
+    status: {
+      order_status: string;
+      payment_status: string;
+      payment_method: string;
+    };
+    items: Array<{
+      id: number;
+      product_id: number;
+      product_variant_id: number;
+      product_name: string;
+      variant_details?: string;
+      quantity: number;
+      unit_price: number;
+      subtotal: number;
+    }>;
+    customer_notes?: string | null;
+    created_at?: string;
+  };
+}> {
+  return await safeFetch(`/checkout/order/${encodeURIComponent(orderNumber)}`);
+}
+
+/**
+ * Initiate or re-initiate SSLCommerz payment for an order
+ */
+export async function initiateSSLCommerzPayment(orderNumber: string): Promise<{
+  success: boolean;
+  redirect_url?: string | null;
+  sessionkey?: string | null;
+  message?: string;
+}> {
+  return await safeFetch(`/payment/sslcommerz/initiate/${encodeURIComponent(orderNumber)}`, {
+    method: "POST",
+  });
+}
+
 
 // -------------------------------------------------------------
 // Customer Authentication & Profile Endpoints

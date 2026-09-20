@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   CheckCircle2,
   ChevronRight,
@@ -31,6 +32,24 @@ import { submitCheckoutOrder, type CheckoutOrderItem } from "@/lib/api";
 export function CheckoutContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const errorParam = searchParams.get("error");
+    const statusParam = searchParams.get("status");
+
+    if (statusParam === "cancelled" || errorParam === "payment_cancelled") {
+      setCheckoutError(
+        "Online payment checkout was cancelled. You may retry payment or select Cash on Delivery."
+      );
+    } else if (statusParam === "failed" || errorParam === "payment_failed") {
+      setCheckoutError(
+        "Your online payment could not be processed by the bank or gateway. Please try again or choose Cash on Delivery."
+      );
+    } else if (errorParam) {
+      setCheckoutError(decodeURIComponent(errorParam));
+    }
+  }, [searchParams]);
 
   const {
     cart,
@@ -55,12 +74,6 @@ export function CheckoutContent() {
     orderNotes: "",
     deliveryMethod: "inside-dhaka",
     paymentMethod: "cod",
-    mobileProvider: "bkash",
-    mobileNumber: "",
-    cardName: "",
-    cardNumber: "",
-    cardExpiry: "",
-    cardCvv: "",
   });
 
   // Pre-fill form details when authenticated user or default address is available
@@ -153,17 +166,9 @@ export function CheckoutContent() {
     setCheckoutError(null);
 
     try {
-      // Map payment method
-      let apiPaymentMethod: "cod" | "bkash" | "nagad" | "card" | "sslcommerz" =
-        "cod";
-      if (formData.paymentMethod === "mobile-banking") {
-        apiPaymentMethod =
-          formData.mobileProvider === "nagad" ? "nagad" : "bkash";
-      } else if (formData.paymentMethod === "card") {
-        apiPaymentMethod = "card";
-      } else {
-        apiPaymentMethod = "cod";
-      }
+      // Strictly cod or sslcommerz
+      const apiPaymentMethod: "cod" | "sslcommerz" =
+        formData.paymentMethod === "sslcommerz" ? "sslcommerz" : "cod";
 
       // Map cart items into payload
       const defaultVariantMap: Record<number, number> = {
@@ -236,12 +241,17 @@ export function CheckoutContent() {
         setAuthSession(response.auth.token, response.auth.user);
       }
 
+      // If online payment gateway returned hosted checkout URL (e.g. SSLCommerz)
+      if (response.redirect_url) {
+        clearCart();
+        window.location.href = response.redirect_url;
+        return;
+      }
+
       const paymentMethodLabel =
         formData.paymentMethod === "cod"
           ? "Cash on Delivery"
-          : formData.paymentMethod === "mobile-banking"
-          ? `${formData.mobileProvider.toUpperCase()} Mobile Banking`
-          : "Credit / Debit Card";
+          : "Online Payment (SSLCommerz)";
 
       const createdOrderNumber =
         response.data?.order_number ||

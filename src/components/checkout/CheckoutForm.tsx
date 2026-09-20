@@ -11,9 +11,7 @@ import {
   EyeOff,
   MapPin,
   Building,
-  CreditCard,
   Banknote,
-  Smartphone,
   Info,
 } from "lucide-react";
 
@@ -27,13 +25,7 @@ export interface CheckoutFormData {
   postalCode: string;
   orderNotes: string;
   deliveryMethod: "inside-dhaka" | "outside-dhaka";
-  paymentMethod: "cod" | "mobile-banking" | "card";
-  mobileProvider: "bkash" | "nagad" | "rocket";
-  mobileNumber: string;
-  cardName: string;
-  cardNumber: string;
-  cardExpiry: string;
-  cardCvv: string;
+  paymentMethod: "cod" | "sslcommerz";
 }
 
 interface CheckoutFormProps {
@@ -486,187 +478,58 @@ export function CheckoutForm({
             </label>
           </div>
 
-          {/* Option B: Mobile Banking (bKash / Nagad / Rocket) */}
+          {/* Option: SSLCommerz Secure Hosted Gateway */}
           <div
             className={`rounded-xl border p-4 transition-all ${
-              formData.paymentMethod === "mobile-banking"
+              formData.paymentMethod === "sslcommerz"
                 ? "border-[#FF5B37] bg-[#FFF8F6] ring-1 ring-[#FF5B37]"
                 : "border-neutral-200 hover:border-neutral-300 bg-white"
             }`}
           >
-            <label className="flex items-center gap-3 cursor-pointer">
+            <label className="flex items-start gap-3 cursor-pointer">
               <input
                 type="radio"
                 name="paymentMethod"
-                value="mobile-banking"
-                checked={formData.paymentMethod === "mobile-banking"}
-                onChange={() => onChange({ paymentMethod: "mobile-banking" })}
-                className="h-4 w-4 border-neutral-300 text-[#FF5B37] focus:ring-[#FF5B37] accent-[#FF5B37]"
+                value="sslcommerz"
+                checked={formData.paymentMethod === "sslcommerz"}
+                onChange={() => onChange({ paymentMethod: "sslcommerz" })}
+                className="mt-0.5 h-4 w-4 border-neutral-300 text-[#FF5B37] focus:ring-[#FF5B37] accent-[#FF5B37]"
               />
-              <Smartphone className="h-4.5 w-4.5 text-pink-600" />
               <div className="flex-1">
-                <span className="text-xs font-bold text-neutral-900 block">
-                  Mobile Banking (bKash / Nagad / Rocket)
-                </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-bold text-neutral-900 block">
+                    Online Payment (SSLCommerz Gateway)
+                  </span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                    Recommended
+                  </span>
+                </div>
                 <span className="text-[11px] text-neutral-500 block mt-0.5">
-                  Instant mobile wallet checkout.
+                  Pay securely with Cards (Visa, MasterCard, Amex), bKash, Nagad, Rocket, Upay or Internet Banking.
                 </span>
+                <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                  <span className="px-2 py-0.5 text-[10px] font-semibold bg-neutral-100 text-neutral-700 rounded border border-neutral-200">
+                    Cards
+                  </span>
+                  <span className="px-2 py-0.5 text-[10px] font-semibold bg-pink-50 text-pink-700 rounded border border-pink-200">
+                    bKash
+                  </span>
+                  <span className="px-2 py-0.5 text-[10px] font-semibold bg-orange-50 text-orange-700 rounded border border-orange-200">
+                    Nagad
+                  </span>
+                  <span className="px-2 py-0.5 text-[10px] font-semibold bg-purple-50 text-purple-700 rounded border border-purple-200">
+                    Rocket
+                  </span>
+                  <span className="px-2 py-0.5 text-[10px] font-semibold bg-blue-50 text-blue-700 rounded border border-blue-200">
+                    NetBanking
+                  </span>
+                </div>
               </div>
             </label>
-
-            {/* Mobile Banking Sub-Form */}
-            {formData.paymentMethod === "mobile-banking" && (
-              <div className="mt-3.5 pt-3.5 border-t border-neutral-200/80 space-y-3">
-                <div className="flex gap-2">
-                  {[
-                    {
-                      id: "bkash",
-                      name: "bKash",
-                      color: "text-pink-600 border-pink-300",
-                    },
-                    {
-                      id: "nagad",
-                      name: "Nagad",
-                      color: "text-orange-600 border-orange-300",
-                    },
-                    {
-                      id: "rocket",
-                      name: "Rocket",
-                      color: "text-purple-600 border-purple-300",
-                    },
-                  ].map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => onChange({ mobileProvider: p.id as any })}
-                      className={`flex-1 py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                        formData.mobileProvider === p.id
-                          ? "bg-white shadow-xs border-[#FF5B37] text-[#FF5B37]"
-                          : "bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-white"
-                      }`}
-                    >
-                      {p.name}
-                    </button>
-                  ))}
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-neutral-700 mb-1">
-                    Your {formData.mobileProvider.toUpperCase()} Account Number
-                  </label>
-                  <input
-                    type="tel"
-                    placeholder="01XXXXXXXXX"
-                    value={formData.mobileNumber}
-                    onChange={(e) =>
-                      onChange({ mobileNumber: e.target.value })
-                    }
-                    className="w-full h-9 rounded-xl border border-neutral-300 px-3 text-xs focus:border-[#FF5B37] focus:outline-none bg-white"
-                  />
-                  <p className="mt-1 text-[10.5px] text-neutral-500">
-                    You will receive an automated OTP prompt after placing your
-                    order.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Option C: Credit / Debit Card */}
-          <div
-            className={`rounded-xl border p-4 transition-all ${
-              formData.paymentMethod === "card"
-                ? "border-[#FF5B37] bg-[#FFF8F6] ring-1 ring-[#FF5B37]"
-                : "border-neutral-200 hover:border-neutral-300 bg-white"
-            }`}
-          >
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="radio"
-                name="paymentMethod"
-                value="card"
-                checked={formData.paymentMethod === "card"}
-                onChange={() => onChange({ paymentMethod: "card" })}
-                className="h-4 w-4 border-neutral-300 text-[#FF5B37] focus:ring-[#FF5B37] accent-[#FF5B37]"
-              />
-              <CreditCard className="h-4.5 w-4.5 text-blue-600" />
-              <div className="flex-1">
-                <span className="text-xs font-bold text-neutral-900 block">
-                  Credit / Debit Card (Visa, MasterCard, Amex)
-                </span>
-                <span className="text-[11px] text-neutral-500 block mt-0.5">
-                  Fast, encrypted card payment gateway.
-                </span>
-              </div>
-            </label>
-
-            {/* Card Sub-Form */}
-            {formData.paymentMethod === "card" && (
-              <div className="mt-3.5 pt-3.5 border-t border-neutral-200/80 space-y-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-neutral-700 mb-1">
-                    Cardholder Name
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Tanvir Ahmed"
-                    value={formData.cardName}
-                    onChange={(e) => onChange({ cardName: e.target.value })}
-                    className="w-full h-9 rounded-xl border border-neutral-300 px-3 text-xs focus:border-[#FF5B37] focus:outline-none bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-neutral-700 mb-1">
-                    Card Number
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="4111 2222 3333 4444"
-                    value={formData.cardNumber}
-                    onChange={(e) =>
-                      onChange({ cardNumber: e.target.value })
-                    }
-                    className="w-full h-9 rounded-xl border border-neutral-300 px-3 text-xs focus:border-[#FF5B37] focus:outline-none bg-white"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-neutral-700 mb-1">
-                      Expiry (MM/YY)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="12/28"
-                      value={formData.cardExpiry}
-                      onChange={(e) =>
-                        onChange({ cardExpiry: e.target.value })
-                      }
-                      className="w-full h-9 rounded-xl border border-neutral-300 px-3 text-xs focus:border-[#FF5B37] focus:outline-none bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-neutral-700 mb-1">
-                      CVC / CVV
-                    </label>
-                    <input
-                      type="password"
-                      maxLength={4}
-                      placeholder="•••"
-                      value={formData.cardCvv}
-                      onChange={(e) =>
-                        onChange({ cardCvv: e.target.value })
-                      }
-                      className="w-full h-9 rounded-xl border border-neutral-300 px-3 text-xs focus:border-[#FF5B37] focus:outline-none bg-white"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </section>
     </div>
   );
 }
+

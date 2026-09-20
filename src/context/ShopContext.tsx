@@ -5,6 +5,7 @@ import React, {
   useContext,
   useState,
   useEffect,
+  useCallback,
   useMemo,
   type ReactNode,
 } from "react";
@@ -131,7 +132,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [categories, setCategories] = useState<CategoryItem[]>(mainCategories);
   const [isCategoriesLoading, setIsCategoriesLoading] = useState(false);
 
-  const refreshCategories = async () => {
+  const refreshCategories = useCallback(async () => {
     setIsCategoriesLoading(true);
     try {
       const tree = await fetchCategoryTree();
@@ -143,7 +144,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsCategoriesLoading(false);
     }
-  };
+  }, []);
 
   // 1. Cart State
   const [cart, setCart] = useState<CartItem[]>(defaultCart);
@@ -162,8 +163,12 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     refreshCategories();
     try {
       const savedCart = localStorage.getItem("elvoa_cart");
-      if (savedCart) {
-        setCart(JSON.parse(savedCart));
+      if (savedCart !== null) {
+        try {
+          setCart(JSON.parse(savedCart));
+        } catch {
+          setCart([]);
+        }
       }
 
       const savedWishlist = localStorage.getItem("elvoa_wishlist");
@@ -196,7 +201,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       console.warn("Could not load stored shop data", e);
     }
-  }, []);
+  }, [refreshCategories]);
 
   // Save changes to localStorage
   useEffect(() => {
@@ -262,10 +267,10 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   }, [cartSubtotal]);
 
   // Cart Operations
-  const openCart = () => setIsCartOpen(true);
-  const closeCart = () => setIsCartOpen(false);
+  const openCart = useCallback(() => setIsCartOpen(true), []);
+  const closeCart = useCallback(() => setIsCartOpen(false), []);
 
-  const addToCart = (product: Product | any, options?: AddToCartOptions) => {
+  const addToCart = useCallback((product: Product | any, options?: AddToCartOptions) => {
     const size = options?.size || (product.sizes && product.sizes[0]) || "Standard";
     const color = options?.color || (product.colors && product.colors[0]) || "Standard";
     const quantity = options?.quantity || 1;
@@ -309,62 +314,70 @@ export function ShopProvider({ children }: { children: ReactNode }) {
 
     // Automatically trigger slide-over drawer
     setIsCartOpen(true);
-  };
+  }, []);
 
-  const updateQuantity = (itemId: string, quantity: number) => {
+  const updateQuantity = useCallback((itemId: string, quantity: number) => {
     if (quantity <= 0) {
-      removeFromCart(itemId);
+      setCart((prev) => prev.filter((item) => item.id !== itemId));
       return;
     }
     setCart((prev) =>
       prev.map((item) => (item.id === itemId ? { ...item, quantity } : item))
     );
-  };
+  }, []);
 
-  const removeFromCart = (itemId: string) => {
+  const removeFromCart = useCallback((itemId: string) => {
     setCart((prev) => prev.filter((item) => item.id !== itemId));
-  };
+  }, []);
 
-  const clearCart = () => {
+  const clearCart = useCallback(() => {
     setCart([]);
-  };
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("elvoa_cart", JSON.stringify([]));
+      } catch (e) {
+        console.warn(e);
+      }
+    }
+  }, []);
 
   // Wishlist Operations
-  const addToWishlist = (product: Product) => {
+  const addToWishlist = useCallback((product: Product) => {
     setWishlist((prev) => {
       if (prev.some((p) => p.id === product.id)) return prev;
       return [...prev, product];
     });
-  };
+  }, []);
 
-  const removeFromWishlist = (productId: string) => {
+  const removeFromWishlist = useCallback((productId: string) => {
     setWishlist((prev) => prev.filter((p) => String(p.id) !== String(productId)));
-  };
+  }, []);
 
-  const toggleWishlist = (product: Product) => {
-    if (wishlist.some((p) => String(p.id) === String(product.id))) {
-      removeFromWishlist(product.id);
-    } else {
-      addToWishlist(product);
-    }
-  };
+  const toggleWishlist = useCallback((product: Product) => {
+    setWishlist((prev) => {
+      if (prev.some((p) => String(p.id) === String(product.id))) {
+        return prev.filter((p) => String(p.id) !== String(product.id));
+      }
+      return [...prev, product];
+    });
+  }, []);
 
-  const isInWishlist = (productId: string) => {
+  const isInWishlist = useCallback((productId: string) => {
     return wishlist.some((p) => String(p.id) === String(productId));
-  };
+  }, [wishlist]);
 
-  const moveToCart = (product: Product) => {
+  const moveToCart = useCallback((product: Product) => {
     addToCart(product);
     removeFromWishlist(product.id);
-  };
+  }, [addToCart, removeFromWishlist]);
 
   // User Profile
-  const updateUserProfile = (updated: Partial<UserProfile>) => {
+  const updateUserProfile = useCallback((updated: Partial<UserProfile>) => {
     setUser((prev) => ({ ...prev, ...updated }));
-  };
+  }, []);
 
   // Orders
-  const addOrder = (newOrderData: Omit<Order, "id" | "orderNumber" | "date" | "status" | "tracking">): Order => {
+  const addOrder = useCallback((newOrderData: Omit<Order, "id" | "orderNumber" | "date" | "status" | "tracking">): Order => {
     const randomSuffix = Math.floor(10000 + Math.random() * 90000);
     const dateFormatted = new Intl.DateTimeFormat("en-US", {
       month: "short",
@@ -394,10 +407,10 @@ export function ShopProvider({ children }: { children: ReactNode }) {
 
     setOrders((prev) => [createdOrder, ...prev]);
     return createdOrder;
-  };
+  }, []);
 
   // Addresses
-  const addAddress = (addressData: Omit<SavedAddress, "id">) => {
+  const addAddress = useCallback((addressData: Omit<SavedAddress, "id">) => {
     const newId = `addr-${Date.now()}`;
     const newAddress: SavedAddress = {
       ...addressData,
@@ -410,61 +423,95 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       }
       return [...prev, newAddress];
     });
-  };
+  }, []);
 
-  const updateAddress = (id: string, updated: Partial<SavedAddress>) => {
+  const updateAddress = useCallback((id: string, updated: Partial<SavedAddress>) => {
     setAddresses((prev) =>
       prev.map((addr) => (addr.id === id ? { ...addr, ...updated } : addr))
     );
-  };
+  }, []);
 
-  const deleteAddress = (id: string) => {
+  const deleteAddress = useCallback((id: string) => {
     setAddresses((prev) => prev.filter((addr) => addr.id !== id));
-  };
+  }, []);
 
-  const setDefaultShippingAddress = (id: string) => {
+  const setDefaultShippingAddress = useCallback((id: string) => {
     setAddresses((prev) =>
       prev.map((addr) => ({
         ...addr,
         isDefaultShipping: addr.id === id,
       }))
     );
-  };
+  }, []);
 
-  const value: ShopContextType = {
-    categories,
-    isCategoriesLoading,
-    refreshCategories,
-    cart,
-    isCartOpen,
-    setIsCartOpen,
-    openCart,
-    closeCart,
-    addToCart,
-    updateQuantity,
-    removeFromCart,
-    clearCart,
-    cartSubtotal,
-    totalCartItems,
-    freeShippingThreshold: FREE_SHIPPING_THRESHOLD,
-    freeShippingProgress,
-    amountNeededForFreeShipping,
-    wishlist,
-    addToWishlist,
-    removeFromWishlist,
-    toggleWishlist,
-    isInWishlist,
-    moveToCart,
-    user,
-    updateUserProfile,
-    orders,
-    addOrder,
-    addresses,
-    addAddress,
-    updateAddress,
-    deleteAddress,
-    setDefaultShippingAddress,
-  };
+  const value: ShopContextType = useMemo(
+    () => ({
+      categories,
+      isCategoriesLoading,
+      refreshCategories,
+      cart,
+      isCartOpen,
+      setIsCartOpen,
+      openCart,
+      closeCart,
+      addToCart,
+      updateQuantity,
+      removeFromCart,
+      clearCart,
+      cartSubtotal,
+      totalCartItems,
+      freeShippingThreshold: FREE_SHIPPING_THRESHOLD,
+      freeShippingProgress,
+      amountNeededForFreeShipping,
+      wishlist,
+      addToWishlist,
+      removeFromWishlist,
+      toggleWishlist,
+      isInWishlist,
+      moveToCart,
+      user,
+      updateUserProfile,
+      orders,
+      addOrder,
+      addresses,
+      addAddress,
+      updateAddress,
+      deleteAddress,
+      setDefaultShippingAddress,
+    }),
+    [
+      categories,
+      isCategoriesLoading,
+      refreshCategories,
+      cart,
+      isCartOpen,
+      openCart,
+      closeCart,
+      addToCart,
+      updateQuantity,
+      removeFromCart,
+      clearCart,
+      cartSubtotal,
+      totalCartItems,
+      freeShippingProgress,
+      amountNeededForFreeShipping,
+      wishlist,
+      addToWishlist,
+      removeFromWishlist,
+      toggleWishlist,
+      isInWishlist,
+      moveToCart,
+      user,
+      updateUserProfile,
+      orders,
+      addOrder,
+      addresses,
+      addAddress,
+      updateAddress,
+      deleteAddress,
+      setDefaultShippingAddress,
+    ]
+  );
 
   return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>;
 }
