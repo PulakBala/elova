@@ -4,21 +4,69 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
-import { heroSlides } from "@/data/hero-slides";
+import { heroSlides, HeroSlide } from "@/data/hero-slides";
+import { fetchBannersApi, resolveAssetUrl } from "@/lib/api";
 
 export function HeroSlider() {
+  const [slides, setSlides] = useState<HeroSlide[]>(heroSlides);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const touchStartXRef = useRef<number | null>(null);
   const touchEndXRef = useRef<number | null>(null);
 
-  const totalSlides = heroSlides.length;
+  // Fetch dynamic banners from database on mount
+  useEffect(() => {
+    let isMounted = true;
+    async function loadDatabaseBanners() {
+      try {
+        const dbBanners = await fetchBannersApi("hero_slider");
+        if (isMounted && dbBanners && dbBanners.length > 0) {
+          const mappedSlides: HeroSlide[] = dbBanners.map((banner, idx) => ({
+            id: `db-banner-${banner.id}`,
+            tag: banner.tag?.trim() || "SPECIAL OFFER",
+            title: banner.title,
+            subtitle: banner.subtitle || "",
+            buttonText: banner.button_text || "Shop Now",
+            buttonHref: banner.link_url || "/shop",
+            image: resolveAssetUrl(
+              banner.image,
+              `/images/hero/hero-slide-${(idx % 3) + 1}.jpg`
+            ),
+            imageAlt: banner.title,
+            accentColor: idx === 1 ? "#2563EB" : idx === 2 ? "#D97706" : "#FF5B37",
+            badgeBg: "bg-white/80 text-neutral-800 border-neutral-300/80",
+            badgeText: "",
+          }));
+          setSlides(mappedSlides);
+        }
+      } catch (err) {
+        console.warn("Failed to load banners from database:", err);
+      }
+    }
+
+    loadDatabaseBanners();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const totalSlides = slides.length;
+
+  // Make sure currentIndex stays within bounds if slides length changes
+  useEffect(() => {
+    if (currentIndex >= totalSlides && totalSlides > 0) {
+      setCurrentIndex(0);
+    }
+  }, [currentIndex, totalSlides]);
 
   const nextSlide = useCallback(() => {
+    if (totalSlides <= 1) return;
     setCurrentIndex((prev) => (prev + 1) % totalSlides);
   }, [totalSlides]);
 
   const prevSlide = useCallback(() => {
+    if (totalSlides <= 1) return;
     setCurrentIndex((prev) => (prev - 1 + totalSlides) % totalSlides);
   }, [totalSlides]);
 
@@ -28,14 +76,14 @@ export function HeroSlider() {
 
   // Autoplay functionality with pause on hover
   useEffect(() => {
-    if (isPaused) return;
+    if (isPaused || totalSlides <= 1) return;
 
     const timer = setInterval(() => {
       nextSlide();
     }, 5500);
 
     return () => clearInterval(timer);
-  }, [isPaused, nextSlide]);
+  }, [isPaused, totalSlides, nextSlide]);
 
   // Touch handlers for mobile swipe
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -58,6 +106,8 @@ export function HeroSlider() {
     touchEndXRef.current = null;
   };
 
+  if (totalSlides === 0) return null;
+
   return (
     <section className="w-full bg-white py-2 sm:py-3.5">
       <div className="mx-auto max-w-[1360px] px-3 sm:px-6">
@@ -75,7 +125,7 @@ export function HeroSlider() {
             className="flex transition-transform duration-600 ease-out will-change-transform"
             style={{ transform: `translateX(-${currentIndex * 100}%)` }}
           >
-            {heroSlides.map((slide) => (
+            {slides.map((slide, idx) => (
               <div
                 key={slide.id}
                 className="w-full shrink-0 grid grid-cols-1 md:grid-cols-12 items-center min-h-[220px] sm:min-h-[270px] lg:min-h-[300px]"
@@ -83,10 +133,12 @@ export function HeroSlider() {
                 {/* Left Content Column */}
                 <div className="z-10 flex flex-col justify-center px-5 py-6 sm:px-10 lg:px-14 md:col-span-7 lg:col-span-7">
                   {/* Eyebrow badge */}
-                  <div className="inline-flex items-center gap-2 self-start rounded-full border border-neutral-300/80 bg-white/80 px-3 py-1 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-neutral-800 shadow-2xs backdrop-blur-xs">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#FF5B37]" />
-                    <span>{slide.tag}</span>
-                  </div>
+                  {slide.tag && (
+                    <div className="inline-flex items-center gap-2 self-start rounded-full border border-neutral-300/80 bg-white/80 px-3 py-1 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-neutral-800 shadow-2xs backdrop-blur-xs">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#FF5B37]" />
+                      <span>{slide.tag}</span>
+                    </div>
+                  )}
 
                   {/* Headline */}
                   <h2 className="mt-3 font-sans text-2xl sm:text-3xl lg:text-[36px] font-extrabold tracking-tight text-neutral-900 leading-[1.15]">
@@ -94,9 +146,11 @@ export function HeroSlider() {
                   </h2>
 
                   {/* Subtitle */}
-                  <p className="mt-2 max-w-lg text-xs sm:text-sm text-neutral-600 font-normal leading-relaxed">
-                    {slide.subtitle}
-                  </p>
+                  {slide.subtitle && (
+                    <p className="mt-2 max-w-lg text-xs sm:text-sm text-neutral-600 font-normal leading-relaxed">
+                      {slide.subtitle}
+                    </p>
+                  )}
 
                   {/* CTA Button */}
                   <div className="mt-4 sm:mt-6">
@@ -114,9 +168,9 @@ export function HeroSlider() {
                 <div className="relative h-[180px] sm:h-[270px] lg:h-[300px] w-full md:col-span-5 lg:col-span-5 overflow-hidden">
                   <Image
                     src={slide.image}
-                    alt={slide.imageAlt}
+                    alt={slide.imageAlt || slide.title}
                     fill
-                    priority={slide.id === "slide-1"}
+                    priority={idx === 0}
                     sizes="(max-width: 768px) 100vw, 45vw"
                     className="object-cover object-center transition-transform duration-700 hover:scale-105"
                   />
@@ -127,44 +181,49 @@ export function HeroSlider() {
             ))}
           </div>
 
-          {/* Cute, Minimal Circular Navigation Arrows */}
-          <button
-            type="button"
-            onClick={prevSlide}
-            aria-label="Previous slide"
-            className="absolute left-3 top-1/2 -translate-y-1/2 flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-white/90 text-neutral-800 shadow-md border border-neutral-200/80 backdrop-blur-xs transition-all hover:bg-white hover:scale-108 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#FF5B37]"
-          >
-            <ChevronLeft className="h-4 w-4 stroke-[2.2]" />
-          </button>
+          {/* Navigation Arrows */}
+          {totalSlides > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={prevSlide}
+                aria-label="Previous slide"
+                className="absolute left-3 top-1/2 -translate-y-1/2 flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-white/90 text-neutral-800 shadow-md border border-neutral-200/80 backdrop-blur-xs transition-all hover:bg-white hover:scale-108 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#FF5B37]"
+              >
+                <ChevronLeft className="h-4 w-4 stroke-[2.2]" />
+              </button>
 
-          <button
-            type="button"
-            onClick={nextSlide}
-            aria-label="Next slide"
-            className="absolute right-3 top-1/2 -translate-y-1/2 flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-white/90 text-neutral-800 shadow-md border border-neutral-200/80 backdrop-blur-xs transition-all hover:bg-white hover:scale-108 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#FF5B37]"
-          >
-            <ChevronRight className="h-4 w-4 stroke-[2.2]" />
-          </button>
+              <button
+                type="button"
+                onClick={nextSlide}
+                aria-label="Next slide"
+                className="absolute right-3 top-1/2 -translate-y-1/2 flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-white/90 text-neutral-800 shadow-md border border-neutral-200/80 backdrop-blur-xs transition-all hover:bg-white hover:scale-108 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#FF5B37]"
+              >
+                <ChevronRight className="h-4 w-4 stroke-[2.2]" />
+              </button>
+            </>
+          )}
 
           {/* Pagination Indicators / Dots */}
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-20">
-            {heroSlides.map((slide, idx) => (
-              <button
-                key={slide.id}
-                type="button"
-                onClick={() => goToSlide(idx)}
-                aria-label={`Go to slide ${idx + 1}`}
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  currentIndex === idx
-                    ? "w-6 bg-[#FF5B37]"
-                    : "w-2 bg-neutral-400/60 hover:bg-neutral-600"
-                }`}
-              />
-            ))}
-          </div>
+          {totalSlides > 1 && (
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-20">
+              {slides.map((slide, idx) => (
+                <button
+                  key={slide.id}
+                  type="button"
+                  onClick={() => goToSlide(idx)}
+                  aria-label={`Go to slide ${idx + 1}`}
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    currentIndex === idx
+                      ? "w-6 bg-[#FF5B37]"
+                      : "w-2 bg-neutral-400/60 hover:bg-neutral-600"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </section>
   );
 }
-

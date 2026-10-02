@@ -323,6 +323,19 @@ export interface ApiFooterData {
   sections: ApiFooterSection[];
 }
 
+export interface ApiBanner {
+  id: number;
+  title: string;
+  tag?: string | null;
+  subtitle?: string | null;
+  image?: string | null;
+  mobile_image?: string | null;
+  link_url?: string | null;
+  button_text?: string | null;
+  placement?: string | null;
+  sort_order?: number;
+}
+
 // -------------------------------------------------------------
 // Token Storage Helpers
 // -------------------------------------------------------------
@@ -801,4 +814,21 @@ export async function fetchFooterDataApi(): Promise<ApiFooterData | null> {
     return null;
   }
 }
+
+export async function fetchBannersApi(
+  placement = "hero_slider"
+): Promise<ApiBanner[]> {
+  try {
+    const query = placement ? `?placement=${encodeURIComponent(placement)}` : "";
+    const res = await safeFetch<{ success: boolean; data: ApiBanner[] }>(`/banners${query}`);
+    if (res && res.success && Array.isArray(res.data)) {
+      return res.data;
+    }
+    return [];
+  } catch (err) {
+    console.warn("fetchBannersApi failed:", err);
+    return [];
+  }
+}
+
 
