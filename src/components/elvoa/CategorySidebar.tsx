@@ -14,6 +14,40 @@ interface CategorySidebarProps {
   categories?: CategoryItem[];
 }
 
+function SidebarCategoryIcon({ cat }: { cat: CategoryItem }) {
+  const fallback =
+    mainCategories.find((c) => c.slug === cat.slug)?.iconImage ||
+    `/images/categories/${cat.slug}.svg`;
+
+  const [imgSrc, setImgSrc] = useState<string>(cat.iconImage || fallback);
+
+  useEffect(() => {
+    if (cat.iconImage) {
+      setImgSrc(cat.iconImage);
+    }
+  }, [cat.iconImage]);
+
+  return (
+    <div className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-white border border-neutral-200/70 p-1 shrink-0 shadow-2xs">
+      <Image
+        src={imgSrc}
+        alt=""
+        width={24}
+        height={24}
+        className="object-contain"
+        unoptimized
+        onError={() => {
+          if (imgSrc !== fallback) {
+            setImgSrc(fallback);
+          } else if (imgSrc !== "/images/categories/more-categories.svg") {
+            setImgSrc("/images/categories/more-categories.svg");
+          }
+        }}
+      />
+    </div>
+  );
+}
+
 export function CategorySidebar({ isOpen, onClose, categories: propCategories }: CategorySidebarProps) {
   const { categories: contextCategories } = useShop();
   const categoriesList = propCategories || contextCategories || mainCategories;
@@ -110,15 +144,7 @@ export function CategorySidebar({ isOpen, onClose, categories: propCategories }:
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-white border border-neutral-200/70 p-1 shrink-0 shadow-2xs">
-                        <Image
-                          src={cat.iconImage}
-                          alt=""
-                          width={24}
-                          height={24}
-                          className="object-contain"
-                        />
-                      </div>
+                      <SidebarCategoryIcon cat={cat} />
                       <span className="font-semibold text-[13.5px]">{cat.name}</span>
                       {cat.badge && (
                         <span className="inline-flex items-center rounded-full bg-[#FF5B37]/10 px-2 py-0.5 text-[10px] font-bold text-[#FF5B37]">

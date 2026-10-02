@@ -1,10 +1,26 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   images: {
+    unoptimized: true,
+    dangerouslyAllowSVG: true,
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     dangerouslyAllowLocalIP: true,
     remotePatterns: [
       {
+        protocol: "https",
+        hostname: "api.signaturebd.net",
+      },
+      {
+        protocol: "https",
+        hostname: "*.signaturebd.net",
+      },
+      {
+        protocol: "https",
+        hostname: "signaturebd.net",
+      },
+      {
         protocol: "http",
         hostname: "fabri.test",
       },
@@ -27,22 +43,16 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "127.0.0.1",
-      },
-      {
-        protocol: "https",
-        hostname: "**",
-      },
-      {
-        protocol: "http",
-        hostname: "**",
       },
     ],
   },
   async rewrites() {
+    const backendUrl =
+      process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
     return [
       {
         source: "/storage/:path*",
-        destination: "http://fabri.test/backend/public/storage/:path*",
+        destination: `${backendUrl}/storage/:path*`,
       },
       { source: "/deals", destination: "/shop?sort=best-selling" },
       { source: "/new-arrivals", destination: "/shop?sort=newest" },

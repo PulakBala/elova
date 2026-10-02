@@ -109,11 +109,17 @@ const defaultWishlistIds = ["chopper", "waterbottle", "blender"];
 const ShopContext = createContext<ShopContextType | undefined>(undefined);
 
 function mapApiCategory(apiCat: ApiCategoryTreeItem): CategoryItem {
+  const fallbackIcon =
+    mainCategories.find((c) => c.slug === apiCat.slug)?.iconImage ||
+    `/images/categories/${apiCat.slug}.svg`;
+
   return {
     id: String(apiCat.id || apiCat.slug),
     name: apiCat.name,
     slug: apiCat.slug,
-    iconImage: resolveAssetUrl(apiCat.icon_image),
+    iconImage: apiCat.icon_image
+      ? resolveAssetUrl(apiCat.icon_image, fallbackIcon)
+      : fallbackIcon,
     badge: apiCat.badge || undefined,
     subcategories: (apiCat.subcategories || []).map((sub) => ({
       id: String(sub.id || sub.slug),

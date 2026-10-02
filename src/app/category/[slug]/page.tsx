@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { mainCategories } from "@/data/categories";
 import { CategoryListingContent } from "@/components/listing/CategoryListingContent";
-import { fetchCategory } from "@/lib/api";
+import { fetchCategory, resolveAssetUrl } from "@/lib/api";
 
 export const dynamicParams = true;
 
@@ -53,7 +53,10 @@ export default async function CategoryPage({ params }: PageProps) {
         id: String(apiCat.id),
         name: apiCat.name,
         slug: apiCat.slug,
-        iconImage: apiCat.icon_image,
+        iconImage: resolveAssetUrl(
+          apiCat.icon_image,
+          `/images/categories/${apiCat.slug}.svg`
+        ),
         subcategories: (apiCat.subcategories || []).map((s) => ({
           id: String(s.id),
           name: s.name,
