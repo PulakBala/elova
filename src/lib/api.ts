@@ -3,19 +3,30 @@
  * Connects Next.js to Laravel REST APIs (/api/v1/...)
  */
 
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://fabri.test/backend/public/api/v1";
+export const BACKEND_BASE_URL = (
+  process.env.NEXT_PUBLIC_BACKEND_URL ||
+  (typeof window !== "undefined" && window.location.hostname.includes("signaturebd.net")
+    ? "https://api.signaturebd.net"
+    : "http://fabri.test/backend/public")
+).replace(/\/+$/, "");
 
-export const BACKEND_BASE_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://fabri.test/backend/public";
+export const API_BASE_URL = (
+  process.env.NEXT_PUBLIC_API_URL ||
+  (typeof window !== "undefined" && window.location.hostname.includes("signaturebd.net")
+    ? "https://api.signaturebd.net/api/v1"
+    : `${BACKEND_BASE_URL}/api/v1`)
+).replace(/\/+$/, "");
 
 /**
  * Utility to properly resolve image asset URLs.
  * Works seamlessly for local public images (/images/...), Laravel uploaded media (/storage/... or products/...), and absolute URLs.
  */
-export function resolveAssetUrl(path: string | null | undefined): string {
+export function resolveAssetUrl(
+  path: string | null | undefined,
+  defaultFallback = "/images/products/placeholder.jpg"
+): string {
   if (!path || typeof path !== "string" || path.trim() === "") {
-    return "/images/products/placeholder.jpg";
+    return defaultFallback;
   }
 
   const trimmed = path.trim();
@@ -25,15 +36,17 @@ export function resolveAssetUrl(path: string | null | undefined): string {
     return trimmed;
   }
 
-  // Frontend public static images (e.g. /images/products/..., /images/elvoa/...)
+  // Frontend public static images (e.g. /images/products/..., /images/elvoa/..., /images/categories/...)
   if (trimmed.startsWith("/images/")) {
     return trimmed;
   }
 
+  const base = BACKEND_BASE_URL.replace(/\/+$/, "");
+
   // Already prefixed with storage (e.g. /storage/products/... or storage/products/...)
   if (trimmed.startsWith("/storage/") || trimmed.startsWith("storage/")) {
     const cleanPath = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
-    return `${BACKEND_BASE_URL}${cleanPath}`;
+    return `${base}${cleanPath}`;
   }
 
   // Uploaded media relative paths from Laravel (e.g. products/gallery/..., categories/..., banners/...)
@@ -44,7 +57,7 @@ export function resolveAssetUrl(path: string | null | undefined): string {
     trimmed.startsWith("gallery/") ||
     trimmed.startsWith("uploads/")
   ) {
-    return `${BACKEND_BASE_URL}/storage/${trimmed}`;
+    return `${base}/storage/${trimmed}`;
   }
 
   // If path has a leading slash, treat as root-relative
@@ -53,7 +66,7 @@ export function resolveAssetUrl(path: string | null | undefined): string {
   }
 
   // Fallback for any other relative path to guarantee a valid URL with /storage/
-  return `${BACKEND_BASE_URL}/storage/${trimmed}`;
+  return `${base}/storage/${trimmed}`;
 }
 
 // -------------------------------------------------------------
@@ -268,6 +281,46 @@ export interface AuthResponse {
     token: string;
   };
   errors?: Record<string, string[]>;
+}
+
+export interface ApiFooterSocialLink {
+  platform: string;
+  title?: string;
+  url: string;
+  is_active?: boolean;
+}
+
+export interface ApiFooterSettings {
+  brand_bio?: string;
+  copyright_text?: string;
+  bottom_slogan?: string;
+  newsletter_title?: string;
+  newsletter_subtitle?: string;
+  newsletter_enabled?: boolean;
+  social_links?: ApiFooterSocialLink[];
+  contact_email?: string | null;
+  contact_phone?: string | null;
+  contact_address?: string | null;
+}
+
+export interface ApiFooterLinkItem {
+  id: number;
+  title: string;
+  url: string;
+  open_in_new_tab?: boolean;
+  sort_order?: number;
+}
+
+export interface ApiFooterSection {
+  id: number;
+  title: string;
+  sort_order?: number;
+  links: ApiFooterLinkItem[];
+}
+
+export interface ApiFooterData {
+  settings: ApiFooterSettings;
+  sections: ApiFooterSection[];
 }
 
 // -------------------------------------------------------------
@@ -735,3 +788,17 @@ export async function setDefaultUserAddressApi(
     }
   );
 }
+
+export async function fetchFooterDataApi(): Promise<ApiFooterData | null> {
+  try {
+    const res = await safeFetch<{ success: boolean; data: ApiFooterData }>("/footer");
+    if (res && res.success && res.data) {
+      return res.data;
+    }
+    return null;
+  } catch (err) {
+    console.warn("fetchFooterDataApi failed:", err);
+    return null;
+  }
+}
+
