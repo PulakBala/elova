@@ -10,6 +10,18 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
+        hostname: "management.elvoabd.com",
+      },
+      {
+        protocol: "https",
+        hostname: "*.elvoabd.com",
+      },
+      {
+        protocol: "https",
+        hostname: "elvoabd.com",
+      },
+      {
+        protocol: "https",
         hostname: "api.signaturebd.net",
       },
       {

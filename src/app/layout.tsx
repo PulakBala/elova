@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
@@ -22,6 +22,9 @@ export const metadata: Metadata = {
   description: "Your trusted online store for everyday essentials, trending products, and more.",
 };
 
+import { Suspense } from "react";
+import { ReferralTracker } from "@/components/elvoa/ReferralTracker";
+
 export default function RootLayout({
   children,
 }: {
@@ -33,6 +36,9 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <Suspense fallback={null}>
+          <ReferralTracker />
+        </Suspense>
         <AuthProvider>
           <ShopProvider>
             {children}

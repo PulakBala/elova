@@ -103,8 +103,8 @@ function TrackOrderInner() {
 
   const getStepIndex = (status: string) => {
     const s = status.toLowerCase();
-    if (s === "cancelled" || s === "returned" || s === "failed") return -1;
-    if (s === "delivered" || s === "completed") return 4;
+    if (s === "cancelled" || s === "returned" || s === "failed" || s === "rejected") return -1;
+    if (s === "delivered" || s === "completed" || s === "closed") return 4;
     if (s === "out_for_delivery" || s === "out for delivery") return 3;
     if (s === "shipped" || s === "in_transit" || s === "in transit") return 2;
     if (s === "confirmed" || s === "processing" || s === "packaging") return 1;
@@ -112,7 +112,7 @@ function TrackOrderInner() {
   };
 
   const currentStep = order ? getStepIndex(order.status.order_status) : 0;
-  const isCancelled = order ? ["cancelled", "failed", "returned"].includes(order.status.order_status.toLowerCase()) : false;
+  const isCancelled = order ? ["cancelled", "failed", "returned", "rejected"].includes(order.status.order_status.toLowerCase()) : false;
 
   const steps = [
     { title: "Order Placed", desc: "Received in our system" },

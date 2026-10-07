@@ -13,6 +13,7 @@ import {
   MapPin,
   LogOut,
   LayoutDashboard,
+  Gift,
 } from "lucide-react";
 import { ElvoaLogo } from "./ElvoaLogo";
 import { useShop } from "@/context/ShopContext";
@@ -157,6 +158,18 @@ export function Header({ onOpenSidebar }: HeaderProps) {
                     >
                       <MapPin className="h-4 w-4" />
                       <span>Saved Addresses</span>
+                    </Link>
+
+                    <Link
+                      href="/account?tab=referrals"
+                      onClick={() => setAccountDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-neutral-700 hover:bg-neutral-50 hover:text-[#FF5B37] transition-colors"
+                    >
+                      <Gift className="h-4 w-4 text-[#FF5B37]" />
+                      <span className="flex-1">Refer & Earn</span>
+                      <span className="text-[10px] font-bold bg-[#FF5B37]/10 text-[#FF5B37] px-1.5 py-0.5 rounded-full">
+                        Earn ৳
+                      </span>
                     </Link>
                   </div>
 

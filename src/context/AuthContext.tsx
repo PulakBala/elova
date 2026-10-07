@@ -24,6 +24,7 @@ interface AuthContextType {
     email?: string;
     password: string;
     password_confirmation: string;
+    referral_code?: string;
   }) => Promise<{ success: boolean; message?: string; errors?: Record<string, string[]> }>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -107,9 +108,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     email?: string;
     password: string;
     password_confirmation: string;
+    referral_code?: string;
   }) => {
     try {
-      const res = await registerApi(payload);
+      const referralCode =
+        payload.referral_code ||
+        (typeof window !== "undefined"
+          ? localStorage.getItem("elvoa_referral_code") || undefined
+          : undefined);
+
+      const res = await registerApi({
+        ...payload,
+        referral_code: referralCode,
+      });
       if (res.success && res.data) {
         setToken(res.data.token);
         setUser(res.data.user);

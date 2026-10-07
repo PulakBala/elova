@@ -216,6 +216,11 @@ export function CheckoutContent() {
         };
       });
 
+      const referralCode =
+        typeof window !== "undefined"
+          ? localStorage.getItem("elvoa_referral_code") || undefined
+          : undefined;
+
       const response = await submitCheckoutOrder({
         customer_name: formData.fullName.trim(),
         customer_phone: formData.phone.trim(),
@@ -230,6 +235,7 @@ export function CheckoutContent() {
         payment_method: apiPaymentMethod,
         coupon_code: appliedCoupon ? appliedCoupon.code : undefined,
         customer_notes: formData.orderNotes?.trim() || undefined,
+        referral_code: referralCode,
         items: orderItems,
       });
 

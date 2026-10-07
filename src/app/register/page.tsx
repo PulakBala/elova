@@ -15,6 +15,7 @@ import {
   AlertCircle,
   Loader2,
   CheckCircle2,
+  Gift,
 } from "lucide-react";
 import { TopBar } from "@/components/elvoa/TopBar";
 import { Header } from "@/components/elvoa/Header";
@@ -37,12 +38,28 @@ function RegisterForm() {
     email: "",
     password: "",
     password_confirmation: "",
+    referral_code: "",
   });
 
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+
+  useEffect(() => {
+    const refFromUrl = searchParams.get("ref");
+    const refFromStorage =
+      typeof window !== "undefined"
+        ? localStorage.getItem("elvoa_referral_code")
+        : null;
+    const activeRef = (refFromUrl || refFromStorage || "").trim().toUpperCase();
+    if (activeRef) {
+      setFormData((prev) => ({
+        ...prev,
+        referral_code: prev.referral_code || activeRef,
+      }));
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!isAuthLoading && isAuthenticated) {
@@ -83,6 +100,7 @@ function RegisterForm() {
         email: formData.email.trim() || undefined,
         password: formData.password,
         password_confirmation: formData.password_confirmation,
+        referral_code: formData.referral_code.trim() || undefined,
       });
 
       if (result.success) {
@@ -262,6 +280,42 @@ function RegisterForm() {
               required
             />
           </div>
+        </div>
+
+        {/* Optional Referral Code */}
+        <div>
+          <label className="block text-xs font-semibold text-neutral-700 mb-1.5 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <Gift className="h-3.5 w-3.5 text-[#FF5B37]" />
+              <span>Referral Code</span>
+            </span>
+            <span className="text-[11px] font-normal text-neutral-400">Optional</span>
+          </label>
+          <div className="relative">
+            <input
+              type="text"
+              value={formData.referral_code}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  referral_code: e.target.value.toUpperCase(),
+                })
+              }
+              placeholder="e.g. ELV8A3B2"
+              className="w-full h-10.5 rounded-xl border border-neutral-300 px-3.5 text-xs text-neutral-900 placeholder-neutral-400 font-mono uppercase tracking-wider transition-colors focus:border-[#FF5B37] focus:outline-none"
+            />
+          </div>
+          {formData.referral_code && (
+            <p className="mt-1 text-[11px] text-emerald-600 flex items-center gap-1">
+              <CheckCircle2 className="h-3 w-3" />
+              <span>Referral code attached: {formData.referral_code}</span>
+            </p>
+          )}
+          {fieldErrors.referral_code && (
+            <p className="mt-1 text-[11px] text-[#D92D20]">
+              {fieldErrors.referral_code[0]}
+            </p>
+          )}
         </div>
 
         {/* Submit */}

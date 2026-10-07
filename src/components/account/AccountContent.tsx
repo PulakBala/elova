@@ -22,6 +22,7 @@ import {
   AlertCircle,
   Truck,
   ExternalLink,
+  Gift,
 } from "lucide-react";
 import { TopBar } from "@/components/elvoa/TopBar";
 import { Header } from "@/components/elvoa/Header";
@@ -31,6 +32,7 @@ import { TrustPillars } from "@/components/elvoa/TrustPillars";
 import { Footer } from "@/components/elvoa/Footer";
 import { OrderDetailsModal } from "./OrderDetailsModal";
 import { AddressModal } from "./AddressModal";
+import { ReferralDashboard } from "./ReferralDashboard";
 import { useShop } from "@/context/ShopContext";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -45,7 +47,7 @@ import {
 } from "@/lib/api";
 import type { Order, SavedAddress, OrderStatus } from "@/data/mock-account";
 
-type ActiveTab = "profile" | "orders" | "addresses";
+type ActiveTab = "profile" | "orders" | "addresses" | "referrals";
 
 function mapApiOrderToFrontendOrder(apiOrder: any): Order {
   const rawStatus = String(apiOrder.order_status || apiOrder.status || "pending").toLowerCase();
@@ -56,8 +58,10 @@ function mapApiOrderToFrontendOrder(apiOrder: any): Order {
     statusCapitalized = "Shipped";
   } else if (["processing", "confirmed", "packed"].includes(rawStatus)) {
     statusCapitalized = "Processing";
-  } else if (["cancelled", "returned"].includes(rawStatus)) {
+  } else if (["cancelled", "returned", "rejected"].includes(rawStatus)) {
     statusCapitalized = "Cancelled";
+  } else if (["closed"].includes(rawStatus)) {
+    statusCapitalized = "Delivered";
   } else {
     statusCapitalized = "Pending";
   }
@@ -170,15 +174,15 @@ export function AccountContent() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>(
-    initialTabParam && ["orders", "profile", "addresses"].includes(initialTabParam)
-      ? initialTabParam
+    initialTabParam && ["orders", "profile", "addresses", "referrals"].includes(initialTabParam)
+      ? (initialTabParam as ActiveTab)
       : "orders"
   );
 
   // Sync tab with URL search parameter if present
   useEffect(() => {
-    if (initialTabParam && ["orders", "profile", "addresses"].includes(initialTabParam)) {
-      setActiveTab(initialTabParam);
+    if (initialTabParam && ["orders", "profile", "addresses", "referrals"].includes(initialTabParam)) {
+      setActiveTab(initialTabParam as ActiveTab);
     }
   }, [initialTabParam]);
 
@@ -453,7 +457,7 @@ export function AccountContent() {
               </div>
 
               {/* Quick Stat Counters */}
-              <div className="grid grid-cols-3 gap-2.5 sm:gap-4 border-t sm:border-t-0 pt-4 sm:pt-0 border-neutral-100">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 border-t sm:border-t-0 pt-4 sm:pt-0 border-neutral-100">
                 {/* Orders Stat */}
                 <button
                   type="button"
@@ -492,6 +496,24 @@ export function AccountContent() {
                   </span>
                   <span className="block text-[11px] text-neutral-500 font-medium">
                     Addresses
+                  </span>
+                </button>
+
+                {/* Referrals Quick Tab */}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("referrals")}
+                  className={`rounded-2xl border p-3 sm:p-3.5 text-center transition-all cursor-pointer group ${
+                    activeTab === "referrals"
+                      ? "border-[#FF5B37] bg-orange-50 text-[#FF5B37]"
+                      : "border-neutral-100 bg-orange-50/40 hover:bg-orange-100/60 text-[#FF5B37]"
+                  }`}
+                >
+                  <span className="flex items-center justify-center text-lg sm:text-xl font-extrabold group-hover:scale-110 transition-transform">
+                    <Gift className="h-5 w-5" />
+                  </span>
+                  <span className="block text-[11px] font-bold">
+                    Refer & Earn
                   </span>
                 </button>
               </div>
@@ -537,6 +559,19 @@ export function AccountContent() {
             >
               <MapPin className="h-4 w-4" />
               <span>Saved Addresses ({addresses.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("referrals")}
+              className={`flex items-center gap-2 pb-3 px-2 text-xs sm:text-sm font-bold border-b-2 transition-all cursor-pointer shrink-0 ${
+                activeTab === "referrals"
+                  ? "border-[#FF5B37] text-[#FF5B37]"
+                  : "border-transparent text-neutral-500 hover:text-neutral-900"
+              }`}
+            >
+              <Gift className="h-4 w-4" />
+              <span>Refer & Earn</span>
             </button>
           </div>
 
@@ -983,6 +1018,9 @@ export function AccountContent() {
               )}
             </div>
           )}
+
+          {/* TAB 4: REFER & EARN / WALLET */}
+          {activeTab === "referrals" && <ReferralDashboard />}
         </div>
       </main>
 

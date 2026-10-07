@@ -5,14 +5,18 @@
 
 export const BACKEND_BASE_URL = (
   process.env.NEXT_PUBLIC_BACKEND_URL ||
-  (typeof window !== "undefined" && window.location.hostname.includes("signaturebd.net")
+  (typeof window !== "undefined" && window.location.hostname.includes("elvoabd.com")
+    ? "https://management.elvoabd.com"
+    : typeof window !== "undefined" && window.location.hostname.includes("signaturebd.net")
     ? "https://api.signaturebd.net"
     : "http://fabri.test/backend/public")
 ).replace(/\/+$/, "");
 
 export const API_BASE_URL = (
   process.env.NEXT_PUBLIC_API_URL ||
-  (typeof window !== "undefined" && window.location.hostname.includes("signaturebd.net")
+  (typeof window !== "undefined" && window.location.hostname.includes("elvoabd.com")
+    ? "https://management.elvoabd.com/api/v1"
+    : typeof window !== "undefined" && window.location.hostname.includes("signaturebd.net")
     ? "https://api.signaturebd.net/api/v1"
     : `${BACKEND_BASE_URL}/api/v1`)
 ).replace(/\/+$/, "");
@@ -209,6 +213,7 @@ export interface CheckoutOrderPayload {
   delivery_method: "inside-dhaka" | "outside-dhaka";
   payment_method: "cod" | "sslcommerz";
   coupon_code?: string | null;
+  referral_code?: string | null;
   customer_notes?: string | null;
   items: CheckoutOrderItem[];
 }
@@ -653,6 +658,7 @@ export async function registerApi(payload: {
   email?: string;
   password: string;
   password_confirmation: string;
+  referral_code?: string;
 }): Promise<AuthResponse> {
   const res = await safeFetch<AuthResponse>("/auth/register", {
     method: "POST",
@@ -830,5 +836,137 @@ export async function fetchBannersApi(
     return [];
   }
 }
+
+// -------------------------------------------------------------
+// Referral & Wallet Types and APIs
+// -------------------------------------------------------------
+
+export interface ApiReferralStats {
+  total_referred_users: number;
+  converted_orders_count: number;
+  available_balance: number;
+  pending_balance: number;
+  lifetime_earned: number;
+}
+
+export interface ApiReferralSettings {
+  is_enabled: boolean;
+  commission_type: "percentage" | "fixed";
+  commission_value: number;
+  minimum_order_value: number;
+  minimum_payout_threshold: number;
+  reward_frequency: "first_order_only" | "all_orders";
+}
+
+export interface ApiReferralDashboard {
+  referral_code: string;
+  referral_link: string;
+  stats: ApiReferralStats;
+  settings: ApiReferralSettings;
+}
+
+export interface ApiWalletTransaction {
+  id: number;
+  wallet_id: number;
+  user_id: number;
+  type: "credit" | "debit";
+  source: string;
+  amount: number;
+  balance_after: number;
+  reference_type?: string | null;
+  reference_id?: number | null;
+  description?: string | null;
+  created_at: string;
+}
+
+export interface ApiPayoutRequest {
+  id: number;
+  payout_number: string;
+  user_id: number;
+  amount: number;
+  method: "bkash" | "nagad" | "rocket" | "bank_transfer";
+  account_number: string;
+  account_name?: string | null;
+  bank_name?: string | null;
+  branch_name?: string | null;
+  routing_number?: string | null;
+  status: "pending" | "paid" | "rejected";
+  transaction_reference?: string | null;
+  admin_notes?: string | null;
+  rejection_reason?: string | null;
+  created_at: string;
+  processed_at?: string | null;
+}
+
+export async function fetchCustomerReferralApi(): Promise<{ success: boolean; data: ApiReferralDashboard } | null> {
+  return await safeFetch<{ success: boolean; data: ApiReferralDashboard }>("/customer/referral");
+}
+
+export async function fetchCustomerWalletTransactionsApi(
+  page = 1
+): Promise<{ success: boolean; data: ApiWalletTransaction[]; meta?: any } | null> {
+  return await safeFetch<{ success: boolean; data: ApiWalletTransaction[]; meta?: any }>(
+    `/customer/referral/transactions?page=${page}`
+  );
+}
+
+export async function fetchCustomerPayoutRequestsApi(
+  page = 1
+): Promise<{ success: boolean; data: ApiPayoutRequest[]; meta?: any } | null> {
+  return await safeFetch<{ success: boolean; data: ApiPayoutRequest[]; meta?: any }>(
+    `/customer/referral/payouts?page=${page}`
+  );
+}
+
+export async function submitCustomerPayoutRequestApi(payload: {
+  amount: number;
+  method: string;
+  account_number: string;
+  account_name?: string;
+  bank_name?: string;
+  branch_name?: string;
+  routing_number?: string;
+  notes?: string;
+}): Promise<{ success: boolean; message: string; data?: ApiPayoutRequest; errors?: Record<string, string[]> }> {
+  return await safeFetch<{ success: boolean; message: string; data?: ApiPayoutRequest; errors?: Record<string, string[]> }>(
+    "/customer/referral/payouts",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+// -------------------------------------------------------------
+// Contact Inquiries API
+// -------------------------------------------------------------
+
+export interface ApiContactMessagePayload {
+  name: string;
+  phone: string;
+  email?: string;
+  subject?: string;
+  message: string;
+}
+
+export interface ApiContactMessageResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    id: number;
+    created_at?: string;
+  };
+}
+
+export async function submitContactMessageApi(
+  payload: ApiContactMessagePayload
+): Promise<ApiContactMessageResponse> {
+  return await safeFetch<ApiContactMessageResponse>("/contact", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+
 
 

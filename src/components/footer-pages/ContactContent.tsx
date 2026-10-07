@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Phone,
@@ -12,10 +12,16 @@ import {
   CheckCircle2,
   HelpCircle,
   ArrowRight,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { FooterPageShell } from "./FooterPageShell";
+import { submitContactMessageApi } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 export function ContactContent() {
+  const { user } = useAuth();
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -26,23 +32,59 @@ export function ContactContent() {
 
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Auto pre-fill if customer is logged in
+  useEffect(() => {
+    if (user) {
+      setFormData((prev) => ({
+        ...prev,
+        name: prev.name || user.name || "",
+        email: prev.email || user.email || "",
+        phone: prev.phone || user.phone || "",
+      }));
+    }
+  }, [user]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.phone || !formData.message) return;
+    setErrorMessage(null);
+
+    if (!formData.name.trim() || !formData.phone.trim() || !formData.message.trim()) {
+      setErrorMessage("Please fill in your name, phone number, and message.");
+      return;
+    }
 
     setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
-      setSubmitted(true);
-      setFormData({
-        name: "",
-        email: "",
-        phone: "",
-        subject: "Order Inquiry",
-        message: "",
+    try {
+      const response = await submitContactMessageApi({
+        name: formData.name.trim(),
+        phone: formData.phone.trim(),
+        email: formData.email.trim() || undefined,
+        subject: formData.subject,
+        message: formData.message.trim(),
       });
-    }, 700);
+
+      if (response && response.success) {
+        setSubmitted(true);
+        setFormData({
+          name: user?.name || "",
+          email: user?.email || "",
+          phone: user?.phone || "",
+          subject: "Order Inquiry",
+          message: "",
+        });
+      } else {
+        setErrorMessage(response?.message || "Failed to submit your message. Please try again.");
+      }
+    } catch (err: any) {
+      console.error("Error submitting contact inquiry:", err);
+      setErrorMessage(
+        err?.message || "Unable to send your inquiry right now. Please call or WhatsApp us directly."
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const contactCards = [
@@ -133,14 +175,24 @@ export function ContactContent() {
               Fill out the form below and our team will get back to you shortly.
             </p>
 
+            {errorMessage && (
+              <div className="mb-5 p-4 rounded-xl bg-rose-50 border border-rose-200 flex items-start gap-3 text-rose-800 text-xs sm:text-sm animate-in fade-in">
+                <AlertCircle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold">Unable to send message</p>
+                  <p className="mt-0.5 text-rose-700">{errorMessage}</p>
+                </div>
+              </div>
+            )}
+
             {submitted ? (
-              <div className="p-6 rounded-2xl bg-emerald-50 border border-emerald-200 text-center">
+              <div className="p-6 rounded-2xl bg-emerald-50 border border-emerald-200 text-center animate-in fade-in zoom-in-95">
                 <CheckCircle2 className="h-10 w-10 text-emerald-600 mx-auto mb-3" />
                 <h3 className="text-base font-bold text-emerald-900">
                   Message Sent Successfully!
                 </h3>
                 <p className="text-xs sm:text-sm text-emerald-700 mt-1 max-w-md mx-auto">
-                  Thank you for reaching out. One of our support representatives will contact you via phone or email within 2-4 hours.
+                  Thank you for reaching out. Your inquiry has been forwarded to our support desk. One of our support representatives will contact you via phone or email shortly.
                 </p>
                 <button
                   type="button"
@@ -232,8 +284,17 @@ export function ContactContent() {
                   disabled={submitting}
                   className="w-full sm:w-auto h-11 px-8 rounded-xl bg-[#FF5B37] text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#eb4e2a] transition-all shadow-sm cursor-pointer disabled:opacity-60"
                 >
-                  <Send className="h-4 w-4" />
-                  <span>{submitting ? "Sending..." : "Submit Inquiry"}</span>
+                  {submitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Sending...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4" />
+                      <span>Submit Inquiry</span>
+                    </>
+                  )}
                 </button>
               </form>
             )}
