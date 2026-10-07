@@ -1,6 +1,5 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   output: "standalone",
   images: {
     unoptimized: true,
@@ -60,7 +59,7 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     const backendUrl =
-      process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+      process.env.NEXT_PUBLIC_BACKEND_URL || "https://management.elvoabd.com";
     return [
       {
         source: "/storage/:path*",
@@ -78,3 +77,4 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+
