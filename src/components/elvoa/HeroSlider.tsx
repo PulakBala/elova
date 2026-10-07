@@ -11,6 +11,7 @@ export function HeroSlider() {
   const [slides, setSlides] = useState<HeroSlide[]>(heroSlides);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
   const touchStartXRef = useRef<number | null>(null);
   const touchEndXRef = useRef<number | null>(null);
 
@@ -167,12 +168,15 @@ export function HeroSlider() {
                 {/* Right Visual Column (High-Res Photography) */}
                 <div className="relative h-[180px] sm:h-[270px] lg:h-[300px] w-full md:col-span-5 lg:col-span-5 overflow-hidden">
                   <Image
-                    src={slide.image}
+                    src={imageErrors[slide.id] ? `/images/hero/hero-slide-${(idx % 3) + 1}.jpg` : slide.image}
                     alt={slide.imageAlt || slide.title}
                     fill
                     priority={idx === 0}
                     sizes="(max-width: 768px) 100vw, 45vw"
                     className="object-cover object-center transition-transform duration-700 hover:scale-105"
+                    onError={() => {
+                      setImageErrors((prev) => ({ ...prev, [slide.id]: true }));
+                    }}
                   />
                   {/* Subtle gradient vignette blending with card */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent md:hidden" />

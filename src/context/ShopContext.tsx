@@ -88,24 +88,6 @@ interface ShopContextType {
 
 const FREE_SHIPPING_THRESHOLD = 1500;
 
-// Initial pre-seeded items for an engaging initial demo experience
-const defaultCart: CartItem[] = [
-  {
-    id: "earbuds-standard-black",
-    productId: "earbuds",
-    title: "TWS Wireless Earbuds (ANC)",
-    image: "/images/products/earbuds.jpg",
-    price: 1099,
-    originalPrice: 1499,
-    size: "Standard",
-    color: "Black",
-    quantity: 1,
-    inStock: true,
-  },
-];
-
-const defaultWishlistIds = ["chopper", "waterbottle", "blender"];
-
 const ShopContext = createContext<ShopContextType | undefined>(undefined);
 
 function mapApiCategory(apiCat: ApiCategoryTreeItem): CategoryItem {
@@ -152,10 +134,10 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // 1. Cart State
-  const [cart, setCart] = useState<CartItem[]>(defaultCart);
+  // 1. Cart State (starts completely empty for real users)
+  const [cart, setCart] = useState<CartItem[]>([]);
 
-  // 2. Wishlist State
+  // 2. Wishlist State (starts empty)
   const [wishlist, setWishlist] = useState<Product[]>([]);
 
   // 3. User & Orders & Addresses
@@ -171,23 +153,34 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       const savedCart = localStorage.getItem("elvoa_cart");
       if (savedCart !== null) {
         try {
-          setCart(JSON.parse(savedCart));
+          const parsedCart = JSON.parse(savedCart);
+          // Filter out legacy dummy item ("earbuds-standard-black") if previously auto-seeded
+          const cleanCart = Array.isArray(parsedCart)
+            ? parsedCart.filter((item: CartItem) => item.id !== "earbuds-standard-black")
+            : [];
+          setCart(cleanCart);
         } catch {
           setCart([]);
         }
       }
 
       const savedWishlist = localStorage.getItem("elvoa_wishlist");
-      if (savedWishlist) {
-        setWishlist(JSON.parse(savedWishlist));
-      } else {
-        // Pre-populate with a couple of nice items from allProducts dynamically
-        import("@/data/products").then(({ allProducts }) => {
-          const sampleWishlist = allProducts.filter((p) =>
-            defaultWishlistIds.includes(p.id)
-          );
-          setWishlist(sampleWishlist);
-        });
+      if (savedWishlist !== null) {
+        try {
+          const parsedWishlist = JSON.parse(savedWishlist);
+          const legacySeedIds = ["chopper", "waterbottle", "blender"];
+          let cleanWishlist = Array.isArray(parsedWishlist) ? parsedWishlist : [];
+          // Clear legacy pre-seeded items if user never manually customized wishlist
+          if (
+            cleanWishlist.length === 3 &&
+            cleanWishlist.every((item: Product) => legacySeedIds.includes(item.id))
+          ) {
+            cleanWishlist = [];
+          }
+          setWishlist(cleanWishlist);
+        } catch {
+          setWishlist([]);
+        }
       }
 
       const savedUser = localStorage.getItem("elvoa_user");
