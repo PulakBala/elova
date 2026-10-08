@@ -15,6 +15,7 @@ import {
   Sparkles,
   User,
   AlertCircle,
+  ShieldCheck,
 } from "lucide-react";
 import { TopBar } from "@/components/elvoa/TopBar";
 import { Header } from "@/components/elvoa/Header";
@@ -132,19 +133,13 @@ export function CheckoutContent() {
     if (!formData.fullName.trim()) {
       newErrors.fullName = "Full name is required";
     }
-    if (!formData.email.trim() || !formData.email.includes("@")) {
+    if (formData.email.trim() && !formData.email.includes("@")) {
       newErrors.email = "Please enter a valid email address";
     }
     if (!formData.phone.trim() || formData.phone.length < 11) {
       newErrors.phone = "Enter a valid 11-digit phone number (e.g. 017XXXXXXXX)";
     }
-    // Only require password for guests creating a new account
-    if (!isAuthenticated) {
-      if (!formData.password || formData.password.length < 6) {
-        newErrors.password =
-          "Password must be at least 6 characters for your account";
-      }
-    }
+    // No password requirement: guests can place orders directly without registering!
     if (!formData.streetAddress.trim()) {
       newErrors.streetAddress = "Please provide your complete delivery address";
     }
@@ -225,9 +220,7 @@ export function CheckoutContent() {
         customer_name: formData.fullName.trim(),
         customer_phone: formData.phone.trim(),
         customer_email: formData.email.trim() || undefined,
-        password: !isAuthenticated
-          ? formData.password || undefined
-          : undefined,
+        password: formData.password?.trim() || undefined,
         shipping_district: formData.city.trim(),
         shipping_address: formData.streetAddress.trim(),
         postal_code: formData.postalCode?.trim() || undefined,
@@ -355,36 +348,41 @@ export function CheckoutContent() {
                 .
               </p>
 
-              {/* Account Status Notice */}
-              <div className="mt-5 rounded-2xl bg-amber-50/80 border border-amber-200/80 p-4 text-left flex items-start gap-3">
-                <User className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="text-xs font-bold text-amber-900">
-                    {isAuthenticated
-                      ? "Linked to Your Account"
-                      : "Account Created Automatically"}
-                  </h4>
-                  <p className="text-[11.5px] text-amber-800 mt-0.5 leading-relaxed">
-                    {isAuthenticated ? (
-                      <>
-                        This order has been linked to your account (
-                        <strong>
-                          {authUser?.email || authUser?.phone || formData.email}
-                        </strong>
-                        ). You can monitor courier tracking and receipts in your
-                        dashboard!
-                      </>
-                    ) : (
-                      <>
-                        Your ELVOA account has been activated for{" "}
-                        <strong>{formData.email || formData.phone}</strong> with
-                        your chosen password. You are now logged in and can
-                        track this order anytime!
-                      </>
-                    )}
-                  </p>
+              {/* Order Status & Verification Notice */}
+              {isAuthenticated ? (
+                <div className="mt-5 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 p-4 text-left flex items-start gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-xs font-bold text-emerald-900">
+                      Order Linked to Your Account
+                    </h4>
+                    <p className="text-[11.5px] text-emerald-800 mt-0.5 leading-relaxed">
+                      This order has been linked to your account (
+                      <strong>
+                        {authUser?.email || authUser?.phone || formData.email}
+                      </strong>
+                      ). You can monitor courier tracking and receipts anytime in your dashboard!
+                    </p>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="mt-5 rounded-2xl bg-blue-50/80 border border-blue-200/80 p-4 text-left flex items-start gap-3">
+                  <ShieldCheck className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-xs font-bold text-blue-900">
+                      Order Received & Verification in Progress
+                    </h4>
+                    <p className="text-[11.5px] text-blue-800 mt-0.5 leading-relaxed">
+                      Our customer support team will contact you at{" "}
+                      <strong>
+                        {placedOrder.shippingAddress.phone || formData.phone}
+                      </strong>{" "}
+                      to confirm your order and delivery details before dispatch. Please keep your Order ID (
+                      <strong>#{placedOrder.orderNumber}</strong>) for tracking!
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Order Tracking Progress Step Bar */}
               <div className="mt-6 pt-6 border-t border-neutral-100 text-left">
@@ -462,13 +460,23 @@ export function CheckoutContent() {
 
               {/* Navigation Action Buttons */}
               <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-                <Link
-                  href="/account"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#111827] px-6 py-3 text-xs sm:text-sm font-bold text-white shadow-xs hover:bg-neutral-800 transition-all cursor-pointer"
-                >
-                  <PackageCheck className="h-4 w-4" />
-                  <span>View in Account Dashboard</span>
-                </Link>
+                {isAuthenticated ? (
+                  <Link
+                    href="/account"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#111827] px-6 py-3 text-xs sm:text-sm font-bold text-white shadow-xs hover:bg-neutral-800 transition-all cursor-pointer"
+                  >
+                    <PackageCheck className="h-4 w-4" />
+                    <span>View in Account Dashboard</span>
+                  </Link>
+                ) : (
+                  <Link
+                    href={`/track-order?order=${encodeURIComponent(placedOrder.orderNumber)}`}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#111827] px-6 py-3 text-xs sm:text-sm font-bold text-white shadow-xs hover:bg-neutral-800 transition-all cursor-pointer"
+                  >
+                    <PackageCheck className="h-4 w-4" />
+                    <span>Track Your Order</span>
+                  </Link>
+                )}
                 <Link
                   href="/"
                   className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-white px-6 py-3 text-xs sm:text-sm font-bold text-neutral-800 hover:bg-neutral-50 transition-all cursor-pointer"

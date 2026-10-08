@@ -4,7 +4,7 @@ import { CheckoutContent } from "@/components/checkout/CheckoutContent";
 
 export const metadata: Metadata = {
   title: "Secure Checkout | ELVOA Store",
-  description: "Complete your order with instant account creation and fast nationwide delivery.",
+  description: "Complete your order with fast nationwide delivery across Bangladesh.",
 };
 
 export default function CheckoutPage() {

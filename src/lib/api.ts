@@ -673,6 +673,20 @@ export async function registerApi(payload: {
   return res;
 }
 
+export async function loginWithGoogleApi(tokenOrCredential: string): Promise<AuthResponse> {
+  const res = await safeFetch<AuthResponse>("/auth/google", {
+    method: "POST",
+    body: JSON.stringify({ token: tokenOrCredential }),
+  });
+  if (res.success && res.data?.token) {
+    setStoredToken(res.data.token);
+    try {
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(res.data.user));
+    } catch {}
+  }
+  return res;
+}
+
 export async function logoutApi(): Promise<{ success: boolean; message: string }> {
   try {
     const res = await safeFetch<{ success: boolean; message: string }>("/auth/logout", {

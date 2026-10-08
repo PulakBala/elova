@@ -16,11 +16,16 @@ import {
   Loader2,
 } from "lucide-react";
 import { FooterPageShell } from "./FooterPageShell";
-import { submitContactMessageApi } from "@/lib/api";
+import {
+  submitContactMessageApi,
+  fetchFooterDataApi,
+  type ApiFooterSettings,
+} from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
 export function ContactContent() {
   const { user } = useAuth();
+  const [footerSettings, setFooterSettings] = useState<ApiFooterSettings | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -33,6 +38,25 @@ export function ContactContent() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Fetch live footer contact settings (phone, email, office address, socials)
+  useEffect(() => {
+    let isMounted = true;
+    fetchFooterDataApi()
+      .then((data) => {
+        if (!isMounted || !data) return;
+        if (data.settings) {
+          setFooterSettings(data.settings);
+        }
+      })
+      .catch((err) => {
+        console.warn("Could not load contact info from footer settings:", err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Auto pre-fill if customer is logged in
   useEffect(() => {
@@ -87,36 +111,54 @@ export function ContactContent() {
     }
   };
 
+  const contactPhone = footerSettings?.contact_phone || "+880 9610-000000";
+  const contactEmail = footerSettings?.contact_email || "support@elvoa.com";
+  const contactAddress =
+    footerSettings?.contact_address ||
+    "House #12, Road #4, Dhanmondi, Dhaka-1205, Bangladesh";
+
+  const rawPhoneClean = contactPhone.replace(/[^0-9+]/g, "");
+  const whatsappSocial = footerSettings?.social_links?.find(
+    (s) => s.platform.toLowerCase() === "whatsapp" && s.is_active && s.url
+  );
+  const whatsappHref =
+    whatsappSocial?.url ||
+    (contactPhone
+      ? `https://wa.me/${contactPhone.replace(/[^0-9]/g, "")}`
+      : "https://wa.me/8801700000000");
+
   const contactCards = [
     {
       icon: Phone,
       title: "Customer Support Hotline",
-      details: "+880 9610-000000",
+      details: contactPhone,
       subtext: "Available Sat – Thu (9:00 AM – 9:00 PM)",
-      href: "tel:+8809610000000",
+      href: `tel:${rawPhoneClean}`,
       action: "Call Now",
     },
     {
       icon: MessageCircle,
       title: "WhatsApp Chat Support",
-      details: "+880 1700-000000",
+      details: contactPhone,
       subtext: "Fastest response for order issues",
-      href: "https://wa.me/8801700000000",
+      href: whatsappHref,
       action: "Chat on WhatsApp",
     },
     {
       icon: Mail,
       title: "Email Support Desk",
-      details: "support@elvoa.com",
+      details: contactEmail,
       subtext: "Responses within 2 to 4 business hours",
-      href: "mailto:support@elvoa.com",
+      href: `mailto:${contactEmail}`,
       action: "Send Email",
     },
     {
       icon: MapPin,
       title: "Fulfillment Hub & Office",
-      details: "House #12, Road #4, Dhanmondi",
-      subtext: "Dhaka-1205, Bangladesh",
+      details: contactAddress.split(",")[0] || contactAddress,
+      subtext: contactAddress.includes(",")
+        ? contactAddress.split(",").slice(1).join(",").trim()
+        : "Dhaka, Bangladesh",
       href: "#",
       action: "View Map",
     },

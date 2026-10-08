@@ -1,25 +1,20 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import {
   User,
   Mail,
   Phone,
-  Lock,
-  Eye,
-  EyeOff,
   MapPin,
   Building,
   Banknote,
-  Info,
 } from "lucide-react";
 
 export interface CheckoutFormData {
   fullName: string;
   email: string;
   phone: string;
-  password: string;
+  password?: string;
   streetAddress: string;
   city: string;
   postalCode: string;
@@ -61,8 +56,6 @@ export function CheckoutForm({
   isAuthenticated,
   currentUser,
 }: CheckoutFormProps) {
-  const [showPassword, setShowPassword] = useState(false);
-
   return (
     <div className="space-y-6">
       {/* Optional Guest Sign In Banner */}
@@ -81,7 +74,7 @@ export function CheckoutForm({
         </div>
       )}
 
-      {/* 1. Customer Details & Instant Account Creation */}
+      {/* 1. Customer Contact Details */}
       <section className="rounded-2xl border border-neutral-200/90 bg-white p-5 sm:p-6 shadow-xs">
         <div className="flex items-center gap-2.5 pb-4 border-b border-neutral-200">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#FF5B37]/10 text-[#FF5B37] font-bold text-xs">
@@ -89,9 +82,7 @@ export function CheckoutForm({
           </div>
           <div>
             <h3 className="text-base font-bold text-neutral-900 leading-tight">
-              {isAuthenticated
-                ? "Customer Contact Details"
-                : "Customer Details & Instant Account Creation"}
+              Customer Contact Details
             </h3>
             <p className="text-[11.5px] text-neutral-500">
               {isAuthenticated && currentUser ? (
@@ -100,7 +91,7 @@ export function CheckoutForm({
                   {currentUser.phone || currentUser.email})
                 </span>
               ) : (
-                "No prior registration needed — your account will be created seamlessly upon order."
+                "Provide your name and phone number to place your order directly."
               )}
             </p>
           </div>
@@ -133,32 +124,6 @@ export function CheckoutForm({
             )}
           </div>
 
-          {/* Email Address */}
-          <div>
-            <label className="block text-xs font-semibold text-neutral-700 mb-1.5">
-              Email Address <span className="text-[#D92D20]">*</span>
-            </label>
-            <div className="relative">
-              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
-              <input
-                type="email"
-                placeholder="you@example.com"
-                value={formData.email}
-                onChange={(e) => onChange({ email: e.target.value })}
-                className={`w-full h-10.5 rounded-xl border pl-10 pr-3.5 text-xs text-neutral-800 placeholder-neutral-400 transition-colors focus:outline-none ${
-                  errors.email
-                    ? "border-[#D92D20] bg-red-50/20"
-                    : "border-neutral-300 focus:border-[#FF5B37]"
-                }`}
-              />
-            </div>
-            {errors.email && (
-              <p className="mt-1 text-[11px] text-[#D92D20] font-medium">
-                {errors.email}
-              </p>
-            )}
-          </div>
-
           {/* Phone Number */}
           <div>
             <label className="block text-xs font-semibold text-neutral-700 mb-1.5">
@@ -185,59 +150,31 @@ export function CheckoutForm({
             )}
           </div>
 
-          {/* Required Create Account Password for Guests */}
-          {!isAuthenticated && (
-            <div className="sm:col-span-2">
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-semibold text-neutral-700 flex items-center gap-1.5">
-                  <span>Create Account Password</span>
-                  <span className="text-[#D92D20]">*</span>
-                </label>
-                <span className="text-[11px] text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded-full">
-                  Instant Account Activation
-                </span>
-              </div>
-              <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Minimum 6 characters"
-                  value={formData.password}
-                  onChange={(e) => onChange({ password: e.target.value })}
-                  className={`w-full h-10.5 rounded-xl border pl-10 pr-11 text-xs text-neutral-800 placeholder-neutral-400 transition-colors focus:outline-none ${
-                    errors.password
-                      ? "border-[#D92D20] bg-red-50/20"
-                      : "border-neutral-300 focus:border-[#FF5B37]"
-                  }`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 cursor-pointer p-1"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-              {errors.password ? (
-                <p className="mt-1 text-[11px] text-[#D92D20] font-medium">
-                  {errors.password}
-                </p>
-              ) : (
-                <p className="mt-1.5 text-[11px] text-neutral-500 flex items-center gap-1">
-                  <Info className="h-3 w-3 text-neutral-400 shrink-0" />
-                  <span>
-                    This password creates your permanent account so you can
-                    track this order in your dashboard.
-                  </span>
-                </p>
-              )}
+          {/* Email Address */}
+          <div>
+            <label className="block text-xs font-semibold text-neutral-700 mb-1.5">
+              Email Address <span className="text-neutral-400 font-normal">(Optional)</span>
+            </label>
+            <div className="relative">
+              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+              <input
+                type="email"
+                placeholder="you@example.com"
+                value={formData.email}
+                onChange={(e) => onChange({ email: e.target.value })}
+                className={`w-full h-10.5 rounded-xl border pl-10 pr-3.5 text-xs text-neutral-800 placeholder-neutral-400 transition-colors focus:outline-none ${
+                  errors.email
+                    ? "border-[#D92D20] bg-red-50/20"
+                    : "border-neutral-300 focus:border-[#FF5B37]"
+                }`}
+              />
             </div>
-          )}
+            {errors.email && (
+              <p className="mt-1 text-[11px] text-[#D92D20] font-medium">
+                {errors.email}
+              </p>
+            )}
+          </div>
         </div>
       </section>
 
