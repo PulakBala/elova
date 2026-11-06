@@ -9,7 +9,7 @@ import React, {
   useMemo,
   type ReactNode,
 } from "react";
-import type { Product } from "@/data/products";
+import type { Product } from "@/types/product";
 import {
   type Order,
   type UserProfile,
@@ -69,9 +69,9 @@ interface ShopContextType {
   // Wishlist
   wishlist: Product[];
   addToWishlist: (product: Product) => void;
-  removeFromWishlist: (productId: string) => void;
+  removeFromWishlist: (productId: string | number) => void;
   toggleWishlist: (product: Product) => void;
-  isInWishlist: (productId: string) => boolean;
+  isInWishlist: (productId: string | number) => boolean;
   moveToCart: (product: Product) => void;
 
   // User Profile, Orders, Addresses
@@ -173,7 +173,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
           // Clear legacy pre-seeded items if user never manually customized wishlist
           if (
             cleanWishlist.length === 3 &&
-            cleanWishlist.every((item: Product) => legacySeedIds.includes(item.id))
+            cleanWishlist.every((item: Product) => legacySeedIds.includes(String(item.id)))
           ) {
             cleanWishlist = [];
           }
@@ -348,7 +348,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const removeFromWishlist = useCallback((productId: string) => {
+  const removeFromWishlist = useCallback((productId: string | number) => {
     setWishlist((prev) => prev.filter((p) => String(p.id) !== String(productId)));
   }, []);
 
@@ -361,7 +361,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const isInWishlist = useCallback((productId: string) => {
+  const isInWishlist = useCallback((productId: string | number) => {
     return wishlist.some((p) => String(p.id) === String(productId));
   }, [wishlist]);
 

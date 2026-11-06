@@ -10,60 +10,59 @@ import { HeroSlider } from "./HeroSlider";
 import { ProductSlider } from "./ProductSlider";
 import { TrustPillars } from "./TrustPillars";
 import { Footer } from "./Footer";
-import {
-  trendingProducts as defaultTrending,
-  dealsUnder499 as defaultDeals,
-  newArrivals as defaultNew,
-  bestSellers as defaultBestSellers,
-  featuredProducts as defaultFeatured,
-} from "@/data/products";
-import { fetchProducts } from "@/lib/api";
+import { fetchProducts, type ApiProduct } from "@/lib/api";
 
 export function HomePageContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Dynamic slider states initialized with immediate mock fallback for zero hydration lag
-  const [trending, setTrending] = useState<any[]>(defaultTrending);
-  const [deals, setDeals] = useState<any[]>(defaultDeals);
-  const [newProds, setNewProds] = useState<any[]>(defaultNew);
-  const [bestSellersList, setBestSellersList] = useState<any[]>(defaultBestSellers);
-  const [featuredList, setFeaturedList] = useState<any[]>(defaultFeatured);
+  // Dynamic slider states initialized with empty arrays (strictly database-driven)
+  const [trending, setTrending] = useState<ApiProduct[]>([]);
+  const [deals, setDeals] = useState<ApiProduct[]>([]);
+  const [newProds, setNewProds] = useState<ApiProduct[]>([]);
+  const [bestSellersList, setBestSellersList] = useState<ApiProduct[]>([]);
+  const [featuredList, setFeaturedList] = useState<ApiProduct[]>([]);
 
   useEffect(() => {
+    let isMounted = true;
+
     // 1. Trending / Hot Products from Database
     fetchProducts({ is_featured: true, per_page: 8 })
       .then((res) => {
-        if (res.products && res.products.length > 0) setTrending(res.products);
+        if (isMounted && res.products) setTrending(res.products);
       })
       .catch(() => {});
 
     // 2. Deals Under 499 from Database
     fetchProducts({ max_price: 499, per_page: 8 })
       .then((res) => {
-        if (res.products && res.products.length > 0) setDeals(res.products);
+        if (isMounted && res.products) setDeals(res.products);
       })
       .catch(() => {});
 
     // 3. New Arrivals from Database
     fetchProducts({ sort: "newest", per_page: 8 })
       .then((res) => {
-        if (res.products && res.products.length > 0) setNewProds(res.products);
+        if (isMounted && res.products) setNewProds(res.products);
       })
       .catch(() => {});
 
     // 4. Best Sellers from Database
     fetchProducts({ sort: "best-selling", per_page: 8 })
       .then((res) => {
-        if (res.products && res.products.length > 0) setBestSellersList(res.products);
+        if (isMounted && res.products) setBestSellersList(res.products);
       })
       .catch(() => {});
 
     // 5. Featured Catalog from Database
     fetchProducts({ sort: "featured", per_page: 8 })
       .then((res) => {
-        if (res.products && res.products.length > 0) setFeaturedList(res.products);
+        if (isMounted && res.products) setFeaturedList(res.products);
       })
       .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return (

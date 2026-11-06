@@ -13,7 +13,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { ProductCard } from "./ProductCard";
-import type { Product } from "@/data/products";
+import type { Product } from "@/types/product";
 
 interface ProductSliderProps {
   title: string;
@@ -47,6 +47,11 @@ export function ProductSlider({
     window.addEventListener("resize", checkScroll);
     return () => window.removeEventListener("resize", checkScroll);
   }, [products]);
+
+  // If there are no products in this section, hide the section
+  if (!products || products.length === 0) {
+    return null;
+  }
 
   const scroll = (direction: "left" | "right") => {
     if (scrollRef.current) {

@@ -19,7 +19,6 @@ import { FilterDrawer } from "./FilterDrawer";
 import { ListingHeader, type SortOption } from "./ListingHeader";
 import { Pagination } from "./Pagination";
 import { mainCategories } from "@/data/categories";
-import { allProducts } from "@/data/products";
 import { useShop } from "@/context/ShopContext";
 import { fetchProducts, type ApiProduct, type PaginationMeta } from "@/lib/api";
 
@@ -164,40 +163,13 @@ export function CategoryListingContent({
       setApiProducts(res.products);
       setPaginationMeta(res.meta);
     } catch (err: any) {
-      console.warn("API products fetch failed, falling back to client-filtered catalog:", err);
-      // Client-side fallback if backend API is offline
-      let fallback = [...allProducts];
-
-      if (categorySlug && categorySlug !== "all" && categorySlug !== "shop") {
-        fallback = fallback.filter(
-          (p) => p.categorySlug?.toLowerCase() === categorySlug.toLowerCase()
-        );
-      }
-      if (filters.selectedSubcategories.length > 0) {
-        fallback = fallback.filter(
-          (p) =>
-            p.subCategorySlug &&
-            filters.selectedSubcategories.includes(p.subCategorySlug)
-        );
-      }
-      if (filters.priceMin) {
-        const min = parseFloat(filters.priceMin);
-        if (!isNaN(min)) fallback = fallback.filter((p) => p.price >= min);
-      }
-      if (filters.priceMax) {
-        const max = parseFloat(filters.priceMax);
-        if (!isNaN(max)) fallback = fallback.filter((p) => p.price <= max);
-      }
-      if (filters.inStockOnly) {
-        fallback = fallback.filter((p) => p.inStock === true);
-      }
-
-      setApiProducts(fallback as unknown as ApiProduct[]);
+      console.warn("API products fetch failed:", err);
+      setApiProducts([]);
       setPaginationMeta({
-        current_page: currentPage,
-        last_page: Math.ceil(fallback.length / PAGE_SIZE) || 1,
+        current_page: 1,
+        last_page: 1,
         per_page: PAGE_SIZE,
-        total: fallback.length,
+        total: 0,
       });
     } finally {
       setIsLoading(false);
