@@ -25,6 +25,9 @@ export interface CartItem {
   id: string;
   productId: string | number;
   variantId?: number;
+  sellerId?: number;
+  sellerName?: string;
+  sellerSlug?: string;
   title: string;
   image: string;
   price: number;
@@ -42,6 +45,9 @@ export interface AddToCartOptions {
   variantId?: number;
   price?: number;
   image?: string;
+  sellerId?: number;
+  sellerName?: string;
+  sellerSlug?: string;
 }
 
 interface ShopContextType {
@@ -282,7 +288,10 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     const originalPrice =
       product.originalPrice !== undefined ? product.originalPrice : product.original_price;
     const image = options?.image || product.image;
-    const itemId = `${product.id}-${variantId || size.toLowerCase()}-${color.toLowerCase()}`;
+    const sellerId = options?.sellerId || product.seller?.id || product.seller_id || 1;
+    const sellerName = options?.sellerName || product.seller?.store_name || product.seller_name || "ELVOA Direct";
+    const sellerSlug = options?.sellerSlug || product.seller?.slug || "elvoa-direct";
+    const itemId = `${product.id}-${variantId || size.toLowerCase()}-${color.toLowerCase()}-s${sellerId}`;
 
     setCart((prev) => {
       const existing = prev.find((item) => item.id === itemId);
@@ -299,6 +308,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
           id: itemId,
           productId: product.id,
           variantId,
+          sellerId,
+          sellerName,
+          sellerSlug,
           title: product.title,
           image,
           price,

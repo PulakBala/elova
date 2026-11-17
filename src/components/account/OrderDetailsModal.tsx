@@ -18,7 +18,7 @@ import {
   Check,
 } from "lucide-react";
 import type { Order } from "@/data/mock-account";
-import { resolveAssetUrl } from "@/lib/api";
+import { resolveAssetUrl, submitReturnRequestApi } from "@/lib/api";
 
 interface OrderDetailsModalProps {
   order: Order | null;
@@ -27,6 +27,12 @@ interface OrderDetailsModalProps {
 
 export function OrderDetailsModal({ order, onClose }: OrderDetailsModalProps) {
   const [copied, setCopied] = useState(false);
+  const [showReturnForm, setShowReturnForm] = useState(false);
+  const [returnReason, setReturnReason] = useState("Damaged / Defective item");
+  const [returnNotes, setReturnNotes] = useState("");
+  const [returnSubmitting, setReturnSubmitting] = useState(false);
+  const [returnSubmitted, setReturnSubmitted] = useState(false);
+  const [returnError, setReturnError] = useState<string | null>(null);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -329,6 +335,99 @@ export function OrderDetailsModal({ order, onClose }: OrderDetailsModalProps) {
             </div>
           </div>
         </div>
+
+        {/* Customer Return & Refund Option for Delivered Orders */}
+        {order.status === "Delivered" && (
+          <div className="my-5 pt-4 border-t border-neutral-200">
+            {!returnSubmitted ? (
+              !showReturnForm ? (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-neutral-50 rounded-2xl border border-neutral-200 text-xs">
+                  <div>
+                    <span className="font-bold text-neutral-900 block mb-0.5">7-Day Easy Return Guarantee</span>
+                    <span className="text-neutral-500">Need to return an item or report a defect?</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowReturnForm(true)}
+                    className="self-start sm:self-auto px-4 py-2 rounded-xl border border-neutral-300 bg-white font-semibold text-neutral-800 hover:bg-neutral-100 hover:text-neutral-900 transition-colors shadow-2xs cursor-pointer"
+                  >
+                    Request Return / Refund
+                  </button>
+                </div>
+              ) : (
+                <div className="p-4 bg-orange-50/50 rounded-2xl border border-orange-200/80 text-xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <strong className="text-neutral-900 font-bold">Initiate Return & Refund</strong>
+                    <button
+                      type="button"
+                      onClick={() => setShowReturnForm(false)}
+                      className="text-neutral-400 hover:text-neutral-600 font-medium"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className="block text-neutral-700 font-semibold mb-1">Reason for Return</label>
+                    <select
+                      value={returnReason}
+                      onChange={(e) => setReturnReason(e.target.value)}
+                      className="w-full bg-white border border-neutral-300 rounded-xl px-3 py-2 text-xs text-neutral-800 focus:outline-none focus:ring-1 focus:ring-[#FF5B37]"
+                    >
+                      <option value="Damaged / Defective item">Damaged or Defective item</option>
+                      <option value="Item not as described">Item not as described / different from photo</option>
+                      <option value="Incorrect size or color delivered">Incorrect size or color delivered</option>
+                      <option value="Missing parts or accessories">Missing parts or accessories</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-neutral-700 font-semibold mb-1">Additional details (Optional)</label>
+                    <textarea
+                      value={returnNotes}
+                      onChange={(e) => setReturnNotes(e.target.value)}
+                      rows={2}
+                      placeholder="Please describe the issue in detail..."
+                      className="w-full bg-white border border-neutral-300 rounded-xl p-2.5 text-xs text-neutral-800 focus:outline-none focus:ring-1 focus:ring-[#FF5B37]"
+                    />
+                  </div>
+
+                  {returnError && (
+                    <p className="text-rose-600 text-xs">{returnError}</p>
+                  )}
+
+                  <button
+                    type="button"
+                    disabled={returnSubmitting}
+                    onClick={async () => {
+                      setReturnSubmitting(true);
+                      setReturnError(null);
+                      const res = await submitReturnRequestApi(Number(order.id), {
+                        seller_order_id: 1,
+                        reason: `${returnReason}: ${returnNotes}`,
+                        amount_requested: order.total,
+                      });
+                      setReturnSubmitting(false);
+                      if (res.success) {
+                        setReturnSubmitted(true);
+                      } else {
+                        setReturnError(res.message);
+                      }
+                    }}
+                    className="w-full py-2.5 bg-[#FF5B37] hover:bg-[#eb4e2a] text-white font-bold rounded-xl text-xs transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
+                  >
+                    {returnSubmitting ? "Submitting Request..." : "Submit Return Request"}
+                  </button>
+                </div>
+              )
+            ) : (
+              <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                <span>Your return request has been submitted. Our Customer Support will review and contact you shortly.</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Modal Footer */}
         <div className="flex justify-end pt-2">

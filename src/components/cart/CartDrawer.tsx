@@ -162,8 +162,13 @@ export function CartDrawer() {
                         </button>
                       </div>
 
-                      {/* Variant Badges */}
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-neutral-500">
+                      {/* Seller & Variant Badges */}
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-neutral-500">
+                        {item.sellerName && (
+                          <span className="inline-flex items-center text-[10px] font-semibold text-[#FF5B37] bg-orange-50 px-1.5 py-0.5 rounded">
+                            {item.sellerName}
+                          </span>
+                        )}
                         {item.color && (
                           <span className="capitalize">Color: {item.color}</span>
                         )}

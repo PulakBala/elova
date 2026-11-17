@@ -27,8 +27,14 @@ export function TopBar() {
           </div>
         </div>
 
-        {/* Right Utility: Track Order */}
-        <div className="flex items-center gap-2 text-neutral-300">
+        {/* Right Utility: Become a Seller & Track Order */}
+        <div className="flex items-center gap-3 text-neutral-300">
+          <Link
+            href="/become-a-seller"
+            className="flex items-center gap-1 text-[11px] font-bold text-[#FF5B37] hover:text-orange-400 transition-colors"
+          >
+            <span>Become a Seller</span>
+          </Link>
           <span className="hidden sm:inline text-neutral-600">|</span>
           <Link
             href="/track-order"

@@ -19,6 +19,8 @@ import {
   Minus,
   Plus,
   Share2,
+  Store,
+  CheckCircle2,
 } from "lucide-react";
 import { TopBar } from "@/components/elvoa/TopBar";
 import { Header } from "@/components/elvoa/Header";
@@ -472,6 +474,42 @@ export function ProductDetailContent({ product }: ProductDetailContentProps) {
                   <Zap className="h-4 w-4 text-amber-400 fill-amber-400" />
                   <span>Buy Now</span>
                 </button>
+              </div>
+
+              {/* Seller / Store Information Card */}
+              <div className="mt-5 rounded-2xl border border-neutral-200/90 bg-white p-3.5 shadow-xs flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-orange-50 text-[#FF5B37] flex items-center justify-center font-bold text-sm shrink-0 border border-orange-100">
+                    <Store className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs text-neutral-500">Sold by</span>
+                      <Link 
+                        href={`/store/${product.seller?.slug || "elvoa-official"}`} 
+                        className="text-xs font-bold text-neutral-900 hover:text-[#FF5B37] transition-colors inline-flex items-center gap-1"
+                      >
+                        {product.seller?.store_name || "ELVOA Direct (Official Flagship)"}
+                      </Link>
+                      {product.seller?.is_verified !== false && (
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 fill-emerald-50 shrink-0" />
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5 text-[11px] text-neutral-500">
+                      <span className="text-amber-500 font-semibold flex items-center gap-0.5">
+                        ★ {product.seller?.rating ? product.seller.rating.toFixed(1) : "4.9"}
+                      </span>
+                      <span>•</span>
+                      <span className="text-emerald-700 font-medium">98% Positive Feedback</span>
+                    </div>
+                  </div>
+                </div>
+                <Link
+                  href={`/store/${product.seller?.slug || "elvoa-official"}`}
+                  className="rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 transition-colors shrink-0 text-center"
+                >
+                  Visit Store
+                </Link>
               </div>
 
               {/* Value Propositions & Delivery Strip */}

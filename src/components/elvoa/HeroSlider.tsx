@@ -5,40 +5,56 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { heroSlides, HeroSlide } from "@/data/hero-slides";
-import { fetchBannersApi, resolveAssetUrl } from "@/lib/api";
+import { fetchBannersApi, resolveAssetUrl, type ApiBanner } from "@/lib/api";
 
-export function HeroSlider() {
-  const [slides, setSlides] = useState<HeroSlide[]>(heroSlides);
+interface HeroSliderProps {
+  initialBanners?: ApiBanner[];
+}
+
+function mapBannersToSlides(banners: ApiBanner[]): HeroSlide[] {
+  return banners.map((banner, idx) => ({
+    id: `db-banner-${banner.id}`,
+    tag: banner.tag?.trim() || "SPECIAL OFFER",
+    title: banner.title,
+    subtitle: banner.subtitle || "",
+    buttonText: banner.button_text || "Shop Now",
+    buttonHref: banner.link_url || "/shop",
+    image: resolveAssetUrl(
+      banner.image,
+      `/images/hero/hero-slide-${(idx % 3) + 1}.jpg`
+    ),
+    imageAlt: banner.title,
+    accentColor: idx === 1 ? "#2563EB" : idx === 2 ? "#D97706" : "#FF5B37",
+    badgeBg: "bg-white/80 text-neutral-800 border-neutral-300/80",
+    badgeText: "",
+  }));
+}
+
+export function HeroSlider({ initialBanners = [] }: HeroSliderProps) {
+  const [slides, setSlides] = useState<HeroSlide[]>(() => {
+    if (initialBanners && initialBanners.length > 0) {
+      return mapBannersToSlides(initialBanners);
+    }
+    return heroSlides;
+  });
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
   const touchStartXRef = useRef<number | null>(null);
   const touchEndXRef = useRef<number | null>(null);
 
-  // Fetch dynamic banners from database on mount
+  // Fetch dynamic banners from database on mount only if not provided from server
   useEffect(() => {
+    if (initialBanners && initialBanners.length > 0) {
+      return;
+    }
+
     let isMounted = true;
     async function loadDatabaseBanners() {
       try {
         const dbBanners = await fetchBannersApi("hero_slider");
         if (isMounted && dbBanners && dbBanners.length > 0) {
-          const mappedSlides: HeroSlide[] = dbBanners.map((banner, idx) => ({
-            id: `db-banner-${banner.id}`,
-            tag: banner.tag?.trim() || "SPECIAL OFFER",
-            title: banner.title,
-            subtitle: banner.subtitle || "",
-            buttonText: banner.button_text || "Shop Now",
-            buttonHref: banner.link_url || "/shop",
-            image: resolveAssetUrl(
-              banner.image,
-              `/images/hero/hero-slide-${(idx % 3) + 1}.jpg`
-            ),
-            imageAlt: banner.title,
-            accentColor: idx === 1 ? "#2563EB" : idx === 2 ? "#D97706" : "#FF5B37",
-            badgeBg: "bg-white/80 text-neutral-800 border-neutral-300/80",
-            badgeText: "",
-          }));
-          setSlides(mappedSlides);
+          setSlides(mapBannersToSlides(dbBanners));
         }
       } catch (err) {
         console.warn("Failed to load banners from database:", err);
@@ -50,7 +66,7 @@ export function HeroSlider() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [initialBanners]);
 
   const totalSlides = slides.length;
 

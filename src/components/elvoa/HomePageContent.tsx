@@ -10,19 +10,47 @@ import { HeroSlider } from "./HeroSlider";
 import { ProductSlider } from "./ProductSlider";
 import { TrustPillars } from "./TrustPillars";
 import { Footer } from "./Footer";
-import { fetchProducts, type ApiProduct } from "@/lib/api";
+import { fetchProducts, type ApiProduct, type ApiBanner } from "@/lib/api";
 
-export function HomePageContent() {
+export interface HomePageContentProps {
+  initialTrending?: ApiProduct[];
+  initialDeals?: ApiProduct[];
+  initialNewArrivals?: ApiProduct[];
+  initialBestSellers?: ApiProduct[];
+  initialFeatured?: ApiProduct[];
+  initialBanners?: ApiBanner[];
+}
+
+export function HomePageContent({
+  initialTrending = [],
+  initialDeals = [],
+  initialNewArrivals = [],
+  initialBestSellers = [],
+  initialFeatured = [],
+  initialBanners = [],
+}: HomePageContentProps = {}) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Dynamic slider states initialized with empty arrays (strictly database-driven)
-  const [trending, setTrending] = useState<ApiProduct[]>([]);
-  const [deals, setDeals] = useState<ApiProduct[]>([]);
-  const [newProds, setNewProds] = useState<ApiProduct[]>([]);
-  const [bestSellersList, setBestSellersList] = useState<ApiProduct[]>([]);
-  const [featuredList, setFeaturedList] = useState<ApiProduct[]>([]);
+  // Dynamic slider states initialized with server-fetched products (Instant 0ms display!)
+  const [trending, setTrending] = useState<ApiProduct[]>(initialTrending);
+  const [deals, setDeals] = useState<ApiProduct[]>(initialDeals);
+  const [newProds, setNewProds] = useState<ApiProduct[]>(initialNewArrivals);
+  const [bestSellersList, setBestSellersList] = useState<ApiProduct[]>(initialBestSellers);
+  const [featuredList, setFeaturedList] = useState<ApiProduct[]>(initialFeatured);
 
+  // If server-side fetch was empty (e.g. cold start / fallback), load from client on mount
   useEffect(() => {
+    const hasInitialData =
+      initialTrending.length > 0 ||
+      initialDeals.length > 0 ||
+      initialNewArrivals.length > 0 ||
+      initialBestSellers.length > 0 ||
+      initialFeatured.length > 0;
+
+    if (hasInitialData) {
+      return;
+    }
+
     let isMounted = true;
 
     // 1. Trending / Hot Products from Database
@@ -63,7 +91,7 @@ export function HomePageContent() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [initialTrending, initialDeals, initialNewArrivals, initialBestSellers, initialFeatured]);
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-neutral-900 selection:bg-[#FF5B37] selection:text-white overflow-x-hidden">
@@ -88,7 +116,7 @@ export function HomePageContent() {
         <CategoryIcons />
 
         {/* 6. Multi-Slide Hero Carousel */}
-        <HeroSlider />
+        <HeroSlider initialBanners={initialBanners} />
 
         {/* 7. Section 1: Trending Products Slider (Dynamic from DB) */}
         <ProductSlider

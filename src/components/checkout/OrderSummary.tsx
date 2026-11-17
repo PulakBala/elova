@@ -134,6 +134,11 @@ export function OrderSummary({
                 {item.title}
               </h4>
               <p className="text-[11px] text-neutral-400">
+                {item.sellerName && (
+                  <span className="font-medium text-[#FF5B37] mr-1">
+                    [{item.sellerName}]
+                  </span>
+                )}
                 {item.color && `Color: ${item.color}`}
                 {item.color && item.size && " | "}
                 {item.size && `Size: ${item.size}`}

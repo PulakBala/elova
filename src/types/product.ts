@@ -32,5 +32,12 @@ export interface Product {
   description?: string | null;
   variants?: ApiProductVariant[] | any[];
   gallery?: string[];
+  seller?: {
+    id: number;
+    store_name: string;
+    slug: string;
+    is_verified?: boolean;
+    rating?: number;
+  } | null;
 }
 

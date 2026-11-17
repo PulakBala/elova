@@ -208,6 +208,7 @@ export function CheckoutContent() {
           product_id: prodId,
           product_variant_id: varId,
           quantity: item.quantity,
+          seller_id: item.sellerId || 1,
         };
       });
 

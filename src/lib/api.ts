@@ -5,20 +5,16 @@
 
 export const BACKEND_BASE_URL = (
   process.env.NEXT_PUBLIC_BACKEND_URL ||
-  (typeof window !== "undefined" && window.location.hostname.includes("elvoabd.com")
-    ? "https://management.elvoabd.com"
-    : typeof window !== "undefined" && window.location.hostname.includes("signaturebd.net")
+  (typeof window !== "undefined" && window.location.hostname.includes("signaturebd.net")
     ? "https://api.signaturebd.net"
-    : "http://fabri.test/backend/public")
+    : typeof window !== "undefined" && window.location.hostname.includes("localhost")
+    ? "http://fabri.test/backend/public"
+    : "https://management.elvoabd.com")
 ).replace(/\/+$/, "");
 
 export const API_BASE_URL = (
   process.env.NEXT_PUBLIC_API_URL ||
-  (typeof window !== "undefined" && window.location.hostname.includes("elvoabd.com")
-    ? "https://management.elvoabd.com/api/v1"
-    : typeof window !== "undefined" && window.location.hostname.includes("signaturebd.net")
-    ? "https://api.signaturebd.net/api/v1"
-    : `${BACKEND_BASE_URL}/api/v1`)
+  `${BACKEND_BASE_URL}/api/v1`
 ).replace(/\/+$/, "");
 
 /**
@@ -151,6 +147,13 @@ export interface ApiProduct {
     slug: string;
     logo?: string | null;
   } | null;
+  seller?: {
+    id: number;
+    store_name: string;
+    slug: string;
+    is_verified?: boolean;
+    rating?: number;
+  } | null;
   colors: string[];
   sizes: string[];
   default_variant_id?: number | null;
@@ -200,6 +203,7 @@ export interface CheckoutOrderItem {
   product_id: number;
   product_variant_id: number;
   quantity: number;
+  seller_id?: number | null;
 }
 
 export interface CheckoutOrderPayload {
@@ -394,14 +398,26 @@ async function safeFetch<T>(endpoint: string, options: RequestInit = {}): Promis
     defaultHeaders["Authorization"] = `Bearer ${token}`;
   }
 
-  const response = await fetch(url, {
+  const fetchOptions: RequestInit = {
     ...options,
     headers: {
       ...defaultHeaders,
       ...((options.headers as Record<string, string>) || {}),
     },
-    cache: options.cache || "no-store",
-  });
+  };
+
+  // If cache is explicitly passed, use it.
+  // On client, default to "no-store" to avoid stale client auth/data.
+  // On server (SSR/ISR), default to { next: { revalidate: 60 } } so Next.js can cache and pre-render.
+  if (options.cache) {
+    fetchOptions.cache = options.cache;
+  } else if (typeof window !== "undefined") {
+    fetchOptions.cache = "no-store";
+  } else if (!(options as any).next) {
+    (fetchOptions as any).next = { revalidate: 60 };
+  }
+
+  const response = await fetch(url, fetchOptions);
 
   const data = await response.json().catch(() => null);
 
@@ -456,7 +472,8 @@ export async function fetchCategory(slug: string): Promise<ApiCategoryTreeItem |
  * Fetch paginated product catalog with query filters
  */
 export async function fetchProducts(
-  params: ProductQueryParams = {}
+  params: ProductQueryParams = {},
+  options?: RequestInit
 ): Promise<{ products: ApiProduct[]; meta: PaginationMeta }> {
   const query = new URLSearchParams();
 
@@ -520,7 +537,7 @@ export async function fetchProducts(
     success: boolean;
     data: ApiProduct[];
     meta: PaginationMeta;
-  }>(endpoint);
+  }>(endpoint, options);
 
   return {
     products: res.data || [],
@@ -836,11 +853,12 @@ export async function fetchFooterDataApi(): Promise<ApiFooterData | null> {
 }
 
 export async function fetchBannersApi(
-  placement = "hero_slider"
+  placement = "hero_slider",
+  options?: RequestInit
 ): Promise<ApiBanner[]> {
   try {
     const query = placement ? `?placement=${encodeURIComponent(placement)}` : "";
-    const res = await safeFetch<{ success: boolean; data: ApiBanner[] }>(`/banners${query}`);
+    const res = await safeFetch<{ success: boolean; data: ApiBanner[] }>(`/banners${query}`, options);
     if (res && res.success && Array.isArray(res.data)) {
       return res.data;
     }
@@ -980,6 +998,217 @@ export async function submitContactMessageApi(
     body: JSON.stringify(payload),
   });
 }
+
+// -------------------------------------------------------------
+// Marketplace Sellers & Storefronts API
+// -------------------------------------------------------------
+
+export interface RegisterSellerPayload {
+  store_name: string;
+  slug: string;
+  seller_name: string;
+  phone: string;
+  email: string;
+  password: string;
+  business_type: "individual" | "company" | "sole_proprietorship";
+  pickup_address: string;
+  pickup_city: string;
+  pickup_district: string;
+  return_address?: string;
+  nid_number: string;
+  trade_license_number?: string;
+  bank_name?: string;
+  bank_account_number?: string;
+  bank_account_name?: string;
+  bank_branch?: string;
+  bank_routing_number?: string;
+  mfs_provider?: "bkash" | "nagad" | "rocket";
+  mfs_number?: string;
+  mfs_account_type?: "personal" | "merchant";
+  terms_accepted: boolean;
+}
+
+export interface ApiStoreDetails {
+  id: number;
+  store_name: string;
+  slug: string;
+  logo_url: string;
+  banner_url: string;
+  headline: string;
+  description: string;
+  business_type: string;
+  is_verified: boolean;
+  is_official: boolean;
+  rating_avg: number;
+  rating_count: number;
+  total_orders_count: number;
+  total_products_count: number;
+  location: {
+    city: string;
+    district: string;
+  };
+  created_at: string;
+}
+
+export async function checkSellerSlugApi(slug: string): Promise<{
+  success: boolean;
+  available: boolean;
+  slug: string;
+  suggested?: string;
+  message: string;
+}> {
+  return await safeFetch(`/marketplace/check-slug?slug=${encodeURIComponent(slug)}`);
+}
+
+export async function registerSellerApi(payload: RegisterSellerPayload): Promise<{
+  success: boolean;
+  message: string;
+  data?: any;
+  auth?: { token: string; user: any };
+  errors?: Record<string, string[]>;
+}> {
+  return await safeFetch("/marketplace/register-seller", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function fetchStoreDetailsApi(slug: string): Promise<ApiStoreDetails | null> {
+  try {
+    const res = await safeFetch<{ success: boolean; data: ApiStoreDetails }>(
+      `/marketplace/stores/${encodeURIComponent(slug)}`
+    );
+    return res.data || null;
+  } catch (e) {
+    console.error(`fetchStoreDetailsApi(${slug}) error:`, e);
+    return null;
+  }
+}
+
+export async function fetchStoreProductsApi(
+  slug: string,
+  options?: { page?: number; sort?: string; per_page?: number }
+): Promise<{ products: ApiProduct[]; meta: PaginationMeta }> {
+  try {
+    const query = new URLSearchParams();
+    if (options?.page) query.set("page", String(options.page));
+    if (options?.sort) query.set("sort", options.sort);
+    if (options?.per_page) query.set("per_page", String(options.per_page));
+
+    const endpoint = `/marketplace/stores/${encodeURIComponent(slug)}/products?${query.toString()}`;
+    const res = await safeFetch<{ success: boolean; data: ApiProduct[]; meta: PaginationMeta }>(endpoint);
+
+    return {
+      products: res.data || [],
+      meta: res.meta || { current_page: 1, last_page: 1, per_page: 16, total: 0 },
+    };
+  } catch (e) {
+    console.error(`fetchStoreProductsApi(${slug}) error:`, e);
+    return {
+      products: [],
+      meta: { current_page: 1, last_page: 1, per_page: 16, total: 0 },
+    };
+  }
+}
+
+export interface ApiSellerReviewItem {
+  id: number;
+  rating: number;
+  quality_rating?: number;
+  delivery_rating?: number;
+  service_rating?: number;
+  review_text?: string | null;
+  created_at: string;
+  user?: {
+    id: number;
+    name: string;
+  } | null;
+}
+
+export async function fetchStoreReviewsApi(
+  slug: string,
+  page = 1
+): Promise<{ reviews: ApiSellerReviewItem[]; meta: PaginationMeta; rating_avg: number; rating_count: number }> {
+  try {
+    const endpoint = `/marketplace/stores/${encodeURIComponent(slug)}/reviews?page=${page}`;
+    const res = await safeFetch<{
+      success: boolean;
+      data: ApiSellerReviewItem[];
+      meta: PaginationMeta & { rating_avg: number; rating_count: number };
+    }>(endpoint);
+
+    return {
+      reviews: res.data || [],
+      meta: res.meta || { current_page: 1, last_page: 1, per_page: 10, total: 0 },
+      rating_avg: res.meta?.rating_avg || 5.0,
+      rating_count: res.meta?.rating_count || 0,
+    };
+  } catch (e) {
+    console.error(`fetchStoreReviewsApi(${slug}) error:`, e);
+    return {
+      reviews: [],
+      meta: { current_page: 1, last_page: 1, per_page: 10, total: 0 },
+      rating_avg: 5.0,
+      rating_count: 0,
+    };
+  }
+}
+
+export async function submitReturnRequestApi(
+  orderId: number,
+  data: {
+    seller_order_id: number;
+    reason: string;
+    amount_requested: number;
+    action_type?: string;
+  }
+): Promise<{ success: boolean; message: string; data?: any }> {
+  try {
+    const res = await safeFetch<{ success: boolean; message: string; data?: any }>(
+      `/marketplace/orders/${orderId}/returns`,
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      }
+    );
+    return res;
+  } catch (e: any) {
+    return {
+      success: false,
+      message: e?.message || "Failed to submit return request. Please try again.",
+    };
+  }
+}
+
+export async function submitSellerReviewApi(
+  orderId: number,
+  sellerId: number,
+  data: {
+    rating: number;
+    review_text?: string;
+    quality_rating?: number;
+    delivery_rating?: number;
+    service_rating?: number;
+  }
+): Promise<{ success: boolean; message: string; data?: any }> {
+  try {
+    const res = await safeFetch<{ success: boolean; message: string; data?: any }>(
+      `/marketplace/orders/${orderId}/sellers/${sellerId}/review`,
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      }
+    );
+    return res;
+  } catch (e: any) {
+    return {
+      success: false,
+      message: e?.message || "Failed to submit review. Please try again.",
+    };
+  }
+}
+
+
 
 
 
