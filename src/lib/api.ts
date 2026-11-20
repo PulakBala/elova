@@ -124,6 +124,7 @@ export interface ApiProduct {
   } | null;
   short_description?: string | null;
   description?: string | null;
+  custom_fields?: Record<string, string> | null;
   image: string;
   gallery: string[];
   price: number;
@@ -201,7 +202,7 @@ export interface ValidateCouponResponse {
 
 export interface CheckoutOrderItem {
   product_id: number;
-  product_variant_id: number;
+  product_variant_id?: number | null;
   quantity: number;
   seller_id?: number | null;
 }
@@ -422,9 +423,16 @@ async function safeFetch<T>(endpoint: string, options: RequestInit = {}): Promis
   const data = await response.json().catch(() => null);
 
   if (!response.ok) {
-    const errorMsg =
-      data?.message ||
-      (data?.errors ? Object.values(data.errors).flat().join(", ") : `HTTP Error ${response.status}`);
+    let errorMsg = "";
+    if (data?.errors && typeof data.errors === "object") {
+      const detailed = Object.values(data.errors).flat().join(", ");
+      if (detailed) {
+        errorMsg = detailed;
+      }
+    }
+    if (!errorMsg) {
+      errorMsg = data?.message || `HTTP Error ${response.status}`;
+    }
     const error: any = new Error(errorMsg);
     error.status = response.status;
     error.data = data;
@@ -646,6 +654,40 @@ export async function initiateSSLCommerzPayment(orderNumber: string): Promise<{
     method: "POST",
   });
 }
+
+export interface ApiShippingSettings {
+  inside_dhaka_fee: number;
+  outside_dhaka_fee: number;
+  is_free_shipping_active: boolean;
+  free_shipping_threshold: number;
+  free_shipping_banner_text?: string | null;
+  estimated_delivery_inside_days?: string | null;
+  estimated_delivery_outside_days?: string | null;
+}
+
+/**
+ * Fetch dynamic shipping and free delivery rules configured in Admin Panel
+ */
+export async function fetchShippingSettingsApi(): Promise<ApiShippingSettings> {
+  try {
+    const res = await safeFetch<{ success: boolean; data: ApiShippingSettings }>("/shipping-settings");
+    if (res.success && res.data) {
+      return res.data;
+    }
+  } catch (e) {
+    console.error("fetchShippingSettingsApi error:", e);
+  }
+  return {
+    inside_dhaka_fee: 60,
+    outside_dhaka_fee: 120,
+    is_free_shipping_active: true,
+    free_shipping_threshold: 1500,
+    free_shipping_banner_text: "Free delivery on orders over ৳1,500!",
+    estimated_delivery_inside_days: "2-3 Business Days",
+    estimated_delivery_outside_days: "3-5 Business Days",
+  };
+}
+
 
 
 // -------------------------------------------------------------

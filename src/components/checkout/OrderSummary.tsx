@@ -35,7 +35,7 @@ export function OrderSummary({
   onPlaceOrder,
   isSubmitting,
 }: OrderSummaryProps) {
-  const { cart, cartSubtotal, totalCartItems, freeShippingThreshold } = useShop();
+  const { cart, cartSubtotal, totalCartItems, freeShippingThreshold, isFreeShippingActive } = useShop();
   const [couponInput, setCouponInput] = useState("");
   const [couponError, setCouponError] = useState("");
   const [couponSuccess, setCouponSuccess] = useState("");
@@ -95,7 +95,7 @@ export function OrderSummary({
   // Discount calculation
   const discountAmount = appliedCoupon ? appliedCoupon.amount : 0;
   const effectiveShipping =
-    cartSubtotal >= freeShippingThreshold || appliedCoupon?.type === "freeship"
+    (isFreeShippingActive && cartSubtotal >= freeShippingThreshold) || appliedCoupon?.type === "freeship"
       ? 0
       : deliveryFee;
   const grandTotal = Math.max(0, cartSubtotal + effectiveShipping - discountAmount);

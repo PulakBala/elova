@@ -29,6 +29,8 @@ export function CartDrawer() {
     freeShippingThreshold,
     freeShippingProgress,
     amountNeededForFreeShipping,
+    isFreeShippingActive,
+    shippingSettings,
   } = useShop();
 
   // Escape key closes drawer & disable body scroll while open
@@ -52,7 +54,7 @@ export function CartDrawer() {
     };
   }, [isCartOpen, closeCart]);
 
-  const hasFreeShipping = cartSubtotal >= freeShippingThreshold;
+  const hasFreeShipping = isFreeShippingActive && cartSubtotal >= freeShippingThreshold;
 
   return (
     <>
@@ -96,33 +98,35 @@ export function CartDrawer() {
         </div>
 
         {/* Free Shipping Progress Bar */}
-        <div className="border-b border-neutral-100 bg-neutral-50/50 px-5 py-3">
-          <div className="flex items-center justify-between text-xs font-semibold mb-1.5">
-            {hasFreeShipping ? (
-              <span className="flex items-center gap-1.5 text-emerald-600 font-bold">
-                <Sparkles className="h-3.5 w-3.5" />
-                <span>You unlocked FREE Nationwide Delivery!</span>
+        {isFreeShippingActive && (
+          <div className="border-b border-neutral-100 bg-neutral-50/50 px-5 py-3">
+            <div className="flex items-center justify-between text-xs font-semibold mb-1.5">
+              {hasFreeShipping ? (
+                <span className="flex items-center gap-1.5 text-emerald-600 font-bold">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span>You unlocked FREE Nationwide Delivery!</span>
+                </span>
+              ) : (
+                <span className="text-neutral-600">
+                  Add <strong>৳{amountNeededForFreeShipping.toLocaleString()}</strong> more for{" "}
+                  <span className="text-[#FF5B37]">FREE delivery</span>
+                </span>
+              )}
+              <span className="text-[11px] text-neutral-400 font-bold">
+                {freeShippingProgress}%
               </span>
-            ) : (
-              <span className="text-neutral-600">
-                Add <strong>৳{amountNeededForFreeShipping.toLocaleString()}</strong> more for{" "}
-                <span className="text-[#FF5B37]">FREE delivery</span>
-              </span>
-            )}
-            <span className="text-[11px] text-neutral-400 font-bold">
-              {freeShippingProgress}%
-            </span>
-          </div>
+            </div>
 
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-200">
-            <div
-              className={`h-full transition-all duration-500 rounded-full ${
-                hasFreeShipping ? "bg-emerald-500" : "bg-[#FF5B37]"
-              }`}
-              style={{ width: `${freeShippingProgress}%` }}
-            />
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-200">
+              <div
+                className={`h-full transition-all duration-500 rounded-full ${
+                  hasFreeShipping ? "bg-emerald-500" : "bg-[#FF5B37]"
+                }`}
+                style={{ width: `${freeShippingProgress}%` }}
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Cart Itemized List */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 scrollbar-none">

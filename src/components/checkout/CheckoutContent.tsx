@@ -56,6 +56,8 @@ export function CheckoutContent() {
     cart,
     cartSubtotal,
     freeShippingThreshold,
+    isFreeShippingActive,
+    shippingSettings,
     addOrder,
     clearCart,
     user: fallbackUser,
@@ -106,10 +108,12 @@ export function CheckoutContent() {
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
   const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
 
-  // Delivery calculation
-  const deliveryFee = formData.deliveryMethod === "inside-dhaka" ? 60 : 120;
+  // Delivery calculation from dynamic Admin Shipping Settings
+  const baseInsideDhakaFee = shippingSettings?.inside_dhaka_fee ?? 60;
+  const baseOutsideDhakaFee = shippingSettings?.outside_dhaka_fee ?? 120;
+  const deliveryFee = formData.deliveryMethod === "inside-dhaka" ? baseInsideDhakaFee : baseOutsideDhakaFee;
   const effectiveShipping =
-    cartSubtotal >= freeShippingThreshold || appliedCoupon?.type === "freeship"
+    (isFreeShippingActive && cartSubtotal >= freeShippingThreshold) || appliedCoupon?.type === "freeship"
       ? 0
       : deliveryFee;
   const discountAmount = appliedCoupon ? appliedCoupon.amount : 0;
@@ -166,19 +170,6 @@ export function CheckoutContent() {
         formData.paymentMethod === "sslcommerz" ? "sslcommerz" : "cod";
 
       // Map cart items into payload
-      const defaultVariantMap: Record<number, number> = {
-        1: 1,
-        2: 4,
-        3: 6,
-        4: 7,
-        5: 9,
-        6: 11,
-        7: 12,
-        8: 13,
-        9: 15,
-        10: 17,
-      };
-
       const orderItems: CheckoutOrderItem[] = cart.map((item) => {
         let prodId =
           typeof item.productId === "number"
@@ -199,14 +190,9 @@ export function CheckoutContent() {
           else prodId = 1;
         }
 
-        let varId = item.variantId;
-        if (!varId) {
-          varId = defaultVariantMap[prodId] || 1;
-        }
-
         return {
           product_id: prodId,
-          product_variant_id: varId,
+          product_variant_id: item.variantId || null,
           quantity: item.quantity,
           seller_id: item.sellerId || 1,
         };
@@ -522,9 +508,27 @@ export function CheckoutContent() {
 
               {/* Real-Time Checkout Error Banner */}
               {checkoutError && (
-                <div className="mb-6 rounded-2xl bg-rose-50 border border-rose-200 p-4 text-xs font-semibold text-rose-800 flex items-center gap-2.5 shadow-xs animate-in fade-in-50 duration-200">
-                  <AlertCircle className="h-4.5 w-4.5 text-rose-600 shrink-0" />
-                  <span>{checkoutError}</span>
+                <div className="mb-6 rounded-2xl bg-rose-50 border border-rose-200 p-4 text-xs font-semibold text-rose-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs animate-in fade-in-50 duration-200">
+                  <div className="flex items-center gap-2.5">
+                    <AlertCircle className="h-4.5 w-4.5 text-rose-600 shrink-0" />
+                    <span>
+                      {checkoutError.includes("product_id is invalid")
+                        ? "Your cart contains older products that are no longer in the catalog. Please clear your cart and select current products."
+                        : checkoutError}
+                    </span>
+                  </div>
+                  {checkoutError.includes("invalid") && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        clearCart();
+                        setCheckoutError(null);
+                      }}
+                      className="shrink-0 px-3 py-1.5 rounded-lg bg-rose-600 text-white font-bold hover:bg-rose-700 transition cursor-pointer self-start sm:self-auto"
+                    >
+                      Clear Outdated Cart
+                    </button>
+                  )}
                 </div>
               )}
 

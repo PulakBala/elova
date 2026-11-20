@@ -19,7 +19,13 @@ import {
   initialAddresses,
 } from "@/data/mock-account";
 import { mainCategories, type CategoryItem } from "@/data/categories";
-import { fetchCategoryTree, resolveAssetUrl, type ApiCategoryTreeItem } from "@/lib/api";
+import {
+  fetchCategoryTree,
+  fetchShippingSettingsApi,
+  resolveAssetUrl,
+  type ApiCategoryTreeItem,
+  type ApiShippingSettings,
+} from "@/lib/api";
 
 export interface CartItem {
   id: string;
@@ -68,6 +74,8 @@ interface ShopContextType {
   clearCart: () => void;
   cartSubtotal: number;
   totalCartItems: number;
+  shippingSettings: ApiShippingSettings;
+  isFreeShippingActive: boolean;
   freeShippingThreshold: number;
   freeShippingProgress: number;
   amountNeededForFreeShipping: number;
@@ -150,6 +158,28 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile>(initialUserProfile);
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [addresses, setAddresses] = useState<SavedAddress[]>(initialAddresses);
+  const [shippingSettings, setShippingSettings] = useState<ApiShippingSettings>({
+    inside_dhaka_fee: 60,
+    outside_dhaka_fee: 120,
+    is_free_shipping_active: true,
+    free_shipping_threshold: 1500,
+    free_shipping_banner_text: "Free delivery on orders over ৳1,500!",
+    estimated_delivery_inside_days: "2-3 Business Days",
+    estimated_delivery_outside_days: "3-5 Business Days",
+  });
+
+  // Load shipping settings from API
+  useEffect(() => {
+    let isMounted = true;
+    fetchShippingSettingsApi().then((settings) => {
+      if (isMounted && settings) {
+        setShippingSettings(settings);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Load from localStorage on client mount & fetch live categories
   useEffect(() => {
@@ -263,13 +293,18 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     return cart.reduce((acc, item) => acc + item.quantity, 0);
   }, [cart]);
 
+  const isFreeShippingActive = shippingSettings.is_free_shipping_active ?? true;
+  const freeShippingThreshold = shippingSettings.free_shipping_threshold || 1500;
+
   const freeShippingProgress = useMemo(() => {
-    return Math.min(100, Math.round((cartSubtotal / FREE_SHIPPING_THRESHOLD) * 100));
-  }, [cartSubtotal]);
+    if (!isFreeShippingActive) return 0;
+    return Math.min(100, Math.round((cartSubtotal / freeShippingThreshold) * 100));
+  }, [cartSubtotal, isFreeShippingActive, freeShippingThreshold]);
 
   const amountNeededForFreeShipping = useMemo(() => {
-    return Math.max(0, FREE_SHIPPING_THRESHOLD - cartSubtotal);
-  }, [cartSubtotal]);
+    if (!isFreeShippingActive) return 0;
+    return Math.max(0, freeShippingThreshold - cartSubtotal);
+  }, [cartSubtotal, isFreeShippingActive, freeShippingThreshold]);
 
   // Cart Operations
   const openCart = useCallback(() => setIsCartOpen(true), []);
@@ -471,7 +506,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       clearCart,
       cartSubtotal,
       totalCartItems,
-      freeShippingThreshold: FREE_SHIPPING_THRESHOLD,
+      shippingSettings,
+      isFreeShippingActive,
+      freeShippingThreshold,
       freeShippingProgress,
       amountNeededForFreeShipping,
       wishlist,
@@ -504,6 +541,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       clearCart,
       cartSubtotal,
       totalCartItems,
+      shippingSettings,
+      isFreeShippingActive,
+      freeShippingThreshold,
       freeShippingProgress,
       amountNeededForFreeShipping,
       wishlist,

@@ -93,6 +93,27 @@ export function ProductCard({ product, className = "" }: ProductCardProps) {
           <Link href={productHref}>{product.title}</Link>
         </h3>
 
+        {/* Seller Store Link / Badge */}
+        {product.seller && (
+          <div className="mt-0.5 flex items-center gap-1 text-[10.5px] text-neutral-500">
+            <span className="truncate">
+              Sold by:{" "}
+              <Link
+                href={`/store/${product.seller.slug || "elvoa-official"}`}
+                onClick={(e) => e.stopPropagation()}
+                className="font-medium text-neutral-700 hover:text-[#FF5B37] hover:underline"
+              >
+                {product.seller.store_name}
+              </Link>
+            </span>
+            {product.seller.is_verified && (
+              <span className="text-emerald-600 font-bold text-[9px]" title="Verified Merchant">
+                ✓
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Rating and Reviews */}
         <div className="mt-1 flex items-center gap-1 text-[11px] sm:text-[11.5px]">
           <Star className="h-3 w-3 fill-amber-400 text-amber-400 shrink-0" />

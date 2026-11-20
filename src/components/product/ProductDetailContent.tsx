@@ -582,8 +582,23 @@ export function ProductDetailContent({ product }: ProductDetailContentProps) {
 
             <div className="py-6">
               {activeTab === "description" && (
-                <div className="prose prose-sm max-w-none text-neutral-700 leading-relaxed space-y-4">
-                  <p>{product.description || product.short_description || "No description provided."}</p>
+                <div className="max-w-none text-sm text-neutral-700 leading-relaxed space-y-3 [&_h1]:text-lg [&_h1]:font-bold [&_h1]:text-neutral-900 [&_h1]:mt-4 [&_h2]:text-base [&_h2]:font-bold [&_h2]:text-neutral-900 [&_h2]:mt-4 [&_h3]:text-sm [&_h3]:font-bold [&_h3]:text-neutral-900 [&_h3]:mt-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-1.5 [&_strong]:font-semibold [&_strong]:text-neutral-900 [&_p]:leading-relaxed">
+                  {product.description ? (
+                    /<[a-z][\s\S]*>/i.test(product.description) ? (
+                      <div
+                        dangerouslySetInnerHTML={{
+                          __html: product.description
+                            .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
+                            .replace(/\son\w+="[^"]*"/gi, "")
+                            .replace(/\son\w+='[^']*'/gi, ""),
+                        }}
+                      />
+                    ) : (
+                      <p className="whitespace-pre-line">{product.description}</p>
+                    )
+                  ) : (
+                    <p>{product.short_description || "No description provided."}</p>
+                  )}
                 </div>
               )}
 
@@ -609,6 +624,14 @@ export function ProductDetailContent({ product }: ProductDetailContentProps) {
                     <span className="font-semibold text-neutral-500">Total Variants</span>
                     <span className="font-bold text-neutral-900">{variants.length} available</span>
                   </div>
+                  {product.custom_fields &&
+                    !Array.isArray(product.custom_fields) &&
+                    Object.entries(product.custom_fields).map(([specKey, specVal]) => (
+                      <div key={specKey} className="flex justify-between gap-4 p-3">
+                        <span className="font-semibold text-neutral-500">{specKey}</span>
+                        <span className="font-bold text-neutral-900 text-right">{String(specVal)}</span>
+                      </div>
+                    ))}
                 </div>
               )}
 

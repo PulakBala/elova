@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useShop } from "@/context/ShopContext";
 import {
   User,
   Mail,
@@ -56,6 +57,12 @@ export function CheckoutForm({
   isAuthenticated,
   currentUser,
 }: CheckoutFormProps) {
+  const { shippingSettings } = useShop();
+  const insideFee = shippingSettings?.inside_dhaka_fee ?? 60;
+  const outsideFee = shippingSettings?.outside_dhaka_fee ?? 120;
+  const insideDays = shippingSettings?.estimated_delivery_inside_days || "Delivered in 24–48 hours";
+  const outsideDays = shippingSettings?.estimated_delivery_outside_days || "Delivered in 2–4 business days";
+
   return (
     <div className="space-y-6">
       {/* Optional Guest Sign In Banner */}
@@ -330,11 +337,11 @@ export function CheckoutForm({
                   Inside Dhaka
                 </span>
                 <span className="block text-[11px] text-neutral-500 mt-0.5">
-                  Delivered in 24–48 hours
+                  {insideDays}
                 </span>
               </div>
             </div>
-            <span className="text-xs font-bold text-neutral-900">৳60</span>
+            <span className="text-xs font-bold text-neutral-900">৳{insideFee}</span>
           </label>
 
           {/* Outside Dhaka */}
@@ -359,11 +366,11 @@ export function CheckoutForm({
                   Outside Dhaka
                 </span>
                 <span className="block text-[11px] text-neutral-500 mt-0.5">
-                  Delivered in 2–4 business days
+                  {outsideDays}
                 </span>
               </div>
             </div>
-            <span className="text-xs font-bold text-neutral-900">৳120</span>
+            <span className="text-xs font-bold text-neutral-900">৳{outsideFee}</span>
           </label>
         </div>
       </section>
