@@ -208,7 +208,17 @@ export function CategorySidebar({ isOpen, onClose, categories: propCategories }:
         </div>
 
         {/* Drawer Bottom Quick Action */}
-        <div className="border-t border-neutral-200 p-4 bg-neutral-50">
+        <div className="border-t border-neutral-200 p-4 bg-neutral-50 space-y-2">
+          <a
+            href={process.env.NEXT_PUBLIC_SELLER_PORTAL_URL || "https://seller.elvoabd.com"}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={onClose}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#FF5B37] hover:bg-orange-600 py-2.5 px-4 text-xs font-bold text-white shadow-sm transition-all"
+          >
+            <span>Become a Seller</span>
+          </a>
+
           <Link
             href="/shop?tag=under-499"
             onClick={onClose}

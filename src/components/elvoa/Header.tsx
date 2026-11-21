@@ -14,6 +14,7 @@ import {
   LogOut,
   LayoutDashboard,
   Gift,
+  Store,
 } from "lucide-react";
 import { ElvoaLogo } from "./ElvoaLogo";
 import { useShop } from "@/context/ShopContext";
@@ -171,6 +172,17 @@ export function Header({ onOpenSidebar }: HeaderProps) {
                         Earn ৳
                       </span>
                     </Link>
+
+                    <a
+                      href={process.env.NEXT_PUBLIC_SELLER_PORTAL_URL || "https://seller.elvoabd.com"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setAccountDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-neutral-700 hover:bg-neutral-50 hover:text-[#FF5B37] transition-colors"
+                    >
+                      <Store className="h-4 w-4 text-[#FF5B37]" />
+                      <span>Become a Seller</span>
+                    </a>
                   </div>
 
                   <div className="pt-1 border-t border-neutral-100">

@@ -30,10 +30,10 @@ export function TopBar() {
         {/* Right Utility: Become a Seller & Track Order */}
         <div className="flex items-center gap-3 text-neutral-300">
           <a
-            href={process.env.NEXT_PUBLIC_SELLER_PORTAL_URL || "http://127.0.0.1:8000/sell"}
+            href={process.env.NEXT_PUBLIC_SELLER_PORTAL_URL || "https://seller.elvoabd.com"}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 text-[11px] font-bold text-[#FF5B37] hover:text-orange-400 transition-colors"
+            className="flex items-center gap-1 text-[11px] font-bold text-[#FF5B37] hover:text-orange-400 transition-colors cursor-pointer"
           >
             <span>Become a Seller</span>
           </a>
