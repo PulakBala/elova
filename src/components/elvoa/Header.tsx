@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
   Gift,
   Store,
+  Sparkles,
 } from "lucide-react";
 import { ElvoaLogo } from "./ElvoaLogo";
 import { useShop } from "@/context/ShopContext";
@@ -178,10 +179,13 @@ export function Header({ onOpenSidebar }: HeaderProps) {
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => setAccountDropdownOpen(false)}
-                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-neutral-700 hover:bg-neutral-50 hover:text-[#FF5B37] transition-colors"
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-[#FF5B37]/10 to-[#ff7c40]/10 text-[#FF5B37] hover:from-[#FF5B37] hover:to-[#ff7c40] hover:text-white transition-all duration-200 group border border-[#FF5B37]/20 hover:border-transparent hover:shadow-md hover:shadow-[#FF5B37]/25 mt-1"
                     >
-                      <Store className="h-4 w-4 text-[#FF5B37]" />
-                      <span>Become a Seller</span>
+                      <Sparkles className="h-4 w-4 shrink-0 group-hover:scale-110 transition-transform" />
+                      <span className="flex-1">Become a Seller</span>
+                      <span className="text-[9px] font-black bg-[#FF5B37] text-white group-hover:bg-white group-hover:text-[#FF5B37] px-1.5 py-0.5 rounded-full transition-colors">
+                        NEW
+                      </span>
                     </a>
                   </div>
 
@@ -239,6 +243,24 @@ export function Header({ onOpenSidebar }: HeaderProps) {
               </span>
             </div>
           </Link>
+
+          {/* Become a Seller — Standalone CTA Button */}
+          <a
+            href={process.env.NEXT_PUBLIC_SELLER_PORTAL_URL || "https://seller.elvoabd.com"}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="relative flex items-center gap-1.5 shrink-0 group"
+            aria-label="Become a Seller"
+          >
+            {/* Glow ring animation */}
+            <span className="absolute inset-0 rounded-full bg-gradient-to-r from-[#FF5B37] to-[#ff8c42] opacity-30 blur-sm group-hover:opacity-60 transition-opacity duration-300 animate-pulse" />
+            <span className="relative flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-gradient-to-r from-[#FF5B37] to-[#ff7c40] text-white font-bold text-[11.5px] sm:text-[12.5px] shadow-lg shadow-[#FF5B37]/30 hover:shadow-[#FF5B37]/50 hover:scale-[1.04] transition-all duration-200 ring-1 ring-white/20">
+              <Sparkles className="h-3.5 w-3.5 fill-white/80 shrink-0 hidden sm:block" />
+              <Store className="h-3.5 w-3.5 shrink-0 sm:hidden" />
+              <span className="hidden sm:inline whitespace-nowrap">Become a Seller</span>
+              <span className="sm:hidden text-[10px] font-black tracking-tight">Sell</span>
+            </span>
+          </a>
 
           {/* Cart Trigger */}
           <button

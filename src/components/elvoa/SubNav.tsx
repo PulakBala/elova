@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, Flame } from "lucide-react";
+import { Menu, Flame, Store } from "lucide-react";
 import { subNavLinks } from "@/data/elvoa-data";
 
 interface SubNavProps {
@@ -57,6 +57,20 @@ export function SubNav({ onOpenSidebar }: SubNavProps) {
             );
           })}
         </div>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Become a Seller — SubNav CTA */}
+        <a
+          href={process.env.NEXT_PUBLIC_SELLER_PORTAL_URL || "https://seller.elvoabd.com"}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hidden md:flex items-center gap-1.5 shrink-0 px-3.5 py-1 rounded-full border-2 border-[#FF5B37] text-[#FF5B37] font-bold text-[12px] hover:bg-[#FF5B37] hover:text-white transition-all duration-200 hover:shadow-md hover:shadow-[#FF5B37]/30 group"
+        >
+          <Store className="h-3.5 w-3.5 group-hover:scale-110 transition-transform shrink-0" />
+          <span className="whitespace-nowrap">Become a Seller</span>
+        </a>
       </div>
     </nav>
   );
